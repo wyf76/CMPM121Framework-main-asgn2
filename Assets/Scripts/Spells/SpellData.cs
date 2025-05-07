@@ -1,37 +1,74 @@
-using System;
+using System.Collections.Generic;
 
-[Serializable]
+
+[System.Serializable]
+public class DamageData
+{
+    public string amount; 
+    public string type;   
+}
+
+[System.Serializable]
 public class ProjectileData
 {
     public string trajectory;
-    public string speed;
-    public int sprite;
-    public string lifetime; // optional
+    public string speed;      
+    public int sprite;       
+    public string lifetime;   
 }
 
-[Serializable]
-public class DamageData
+[System.Serializable]
+public class EffectData 
 {
-    public string amount;
-    public string type;
+    public string type; 
+
+    // For Pierce
+    public string count;
+
+    // For Chill
+    public string duration;    
+    public string slow_factor; 
+
+    // For Chain Reaction
+    public string chance;              
+    public string secondary_spell_id;  
+    public string radius;              
+
+    // For Lifesteal
+    public string percent;             
+
+
 }
 
-[Serializable]
+[System.Serializable]
 public class SpellData
 {
     public string name;
     public string description;
     public int icon;
-
-    public string mana_cost;
-    public string cooldown;
-    public string N;
-
-    public DamageData damage;
-    public string secondary_damage;
-
+    public DamageData damage;     
+    public string mana_cost;         
+    public string cooldown;         
+  
     public ProjectileData projectile;
-    public ProjectileData secondary_projectile;
 
-    public string inner_spell; // for modifier spells
+  
+    public string inner_spell; 
+
+    public string damage_multiplier;   
+    public string mana_multiplier;
+    public string mana_adder;          
+    public string speed_multiplier;  
+    public string cooldown_multiplier; 
+    public string delay;            
+    public string angle;           
+    public string projectile_trajectory; 
+
+
+    public string N;             
+    public string secondary_damage;  
+    public ProjectileData secondary_projectile;
+    public string spray;            
+
+    public List<EffectData> effects; 
 }

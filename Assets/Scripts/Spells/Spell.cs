@@ -14,10 +14,21 @@ public class Spell
         this.owner = owner;
     }
 
-    public string GetName()
+    public virtual string GetName()
     {
-        return "Bolt";
+        return "Generic Spell";
     }
+
+    public virtual string GetDescription()
+    {
+        return "A basic magical effect."; 
+    }
+
+    public virtual int GetIcon()
+    {
+        return 0;
+    }
+
 
     public virtual int GetManaCost()
     {
@@ -26,38 +37,60 @@ public class Spell
 
     public virtual int GetDamage()
     {
-        return 100;
+  
+        return 10; 
     }
 
     public virtual float GetCooldown()
     {
-        return 0.75f;
-    }
-
-    public virtual int GetIcon()
-    {
-        return 0;
+        return 1.0f;
     }
 
     public bool IsReady()
     {
-        return (last_cast + GetCooldown() < Time.time);
+        float cooldown = GetCooldown();
+        if (cooldown <= 0) return true;
+        return (last_cast + cooldown < Time.time);
     }
 
-    public virtual IEnumerator Cast(Vector3 where, Vector3 target, Hittable.Team team)
+    public virtual IEnumerator Cast(Vector3 where, Vector3 target, Hittable.Team teamOfCaster) 
     {
-        this.team = team;
-        GameManager.Instance.projectileManager.CreateProjectile(0, "straight", where, target - where, 15f, OnHit);
-        yield return new WaitForEndOfFrame();
+        this.last_cast = Time.time; // Record cast time
+        this.team = teamOfCaster;   
+
+        if (GameManager.Instance != null && GameManager.Instance.projectileManager != null)
+        {
+            GameManager.Instance.projectileManager.CreateProjectile(
+                GetIcon(),         
+                "straight",      
+                where,
+                (target - where).normalized,
+                15f,            
+                OnHit            
+            );
+        }
+        yield return null;
     }
 
-    void OnHit(Hittable other, Vector3 impact)
+    protected virtual void OnHit(Hittable other, Vector3 impactPoint) 
     {
-        if (other.team != team)
+        if (other.team != this.team) 
         {
             other.Damage(new Damage(GetDamage(), Damage.Type.ARCANE));
         }
-
     }
 
+    // Helper to find a specific effect from SpellData (will be used more in BaseSpell/ModifierSpell)
+    protected EffectData GetEffectData(SpellData spellData, string effectType)
+    {
+        if (spellData?.effects == null) return null;
+        foreach (var effect in spellData.effects)
+        {
+            if (effect.type.ToLower() == effectType.ToLower())
+            {
+                return effect;
+            }
+        }
+        return null;
+    }
 }

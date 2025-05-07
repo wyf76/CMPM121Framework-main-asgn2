@@ -7,8 +7,8 @@ public class GameOverUI : MonoBehaviour
 {
     public static GameOverUI Instance { get; private set; }
 
-    private GameObject panel;
-    private TextMeshProUGUI messageText;
+    [SerializeField] private GameObject panel;
+    [SerializeField] private TextMeshProUGUI messageText;
     private Button restartButton;
 
     private void Awake()
