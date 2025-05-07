@@ -123,4 +123,12 @@ public class PlayerController : MonoBehaviour
         spells[0] = newSpell;
         spellUIContainer.spellUIs[0].GetComponent<SpellUI>().SetSpell(newSpell);
     }
+
+    public void DropSpellAt(int index)
+    {
+        if (index < 0 || index >= spells.Length || spells[index] == null) return;
+
+        spells[index] = null;
+        spellUIContainer.spellUIs[index].SetActive(false);
+    }
 }

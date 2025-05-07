@@ -704,7 +704,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 250, y: 0}
+  m_AnchoredPosition: {x: 0, y: 200}
   m_SizeDelta: {x: 800, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &211949845
@@ -736,7 +736,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4278716649
   m_fontColor: {r: 0.9150943, g: 0.030215396, b: 0.030215396, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -2013,6 +2013,7 @@ GameObject:
   - component: {fileID: 426128249}
   - component: {fileID: 426128248}
   - component: {fileID: 426128247}
+  - component: {fileID: 426128250}
   m_Layer: 5
   m_Name: drop
   m_TagString: Untagged
@@ -2083,7 +2084,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 426128248}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 426128250}
+        m_TargetAssemblyTypeName: DropButton, Assembly-CSharp
+        m_MethodName: OnClickDrop
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &426128248
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2122,6 +2135,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 426128245}
   m_CullTransparentMesh: 1
+--- !u!114 &426128250
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 426128245}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd69e983b2e824c4ea46cd250fc2953e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  index: 1
 --- !u!1 &447376980
 GameObject:
   m_ObjectHideFlags: 0
@@ -2921,6 +2947,7 @@ GameObject:
   - component: {fileID: 578112683}
   - component: {fileID: 578112682}
   - component: {fileID: 578112681}
+  - component: {fileID: 578112684}
   m_Layer: 5
   m_Name: drop
   m_TagString: Untagged
@@ -2991,7 +3018,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 578112682}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 578112684}
+        m_TargetAssemblyTypeName: DropButton, Assembly-CSharp
+        m_MethodName: OnClickDrop
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &578112682
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3030,6 +3069,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 578112679}
   m_CullTransparentMesh: 1
+--- !u!114 &578112684
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 578112679}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd69e983b2e824c4ea46cd250fc2953e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  index: 3
 --- !u!1 &587991941
 GameObject:
   m_ObjectHideFlags: 0
@@ -4288,7 +4340,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 200}
+  m_AnchoredPosition: {x: 0, y: 140}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &953701973
@@ -6210,6 +6262,7 @@ GameObject:
   - component: {fileID: 1528944913}
   - component: {fileID: 1528944912}
   - component: {fileID: 1528944911}
+  - component: {fileID: 1528944914}
   m_Layer: 5
   m_Name: drop
   m_TagString: Untagged
@@ -6280,7 +6333,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1528944912}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1528944914}
+        m_TargetAssemblyTypeName: DropButton, Assembly-CSharp
+        m_MethodName: OnClickDrop
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1528944912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6319,6 +6384,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1528944909}
   m_CullTransparentMesh: 1
+--- !u!114 &1528944914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1528944909}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dd69e983b2e824c4ea46cd250fc2953e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  index: 2
 --- !u!1 &1577913786
 GameObject:
   m_ObjectHideFlags: 0
