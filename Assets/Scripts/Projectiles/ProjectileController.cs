@@ -1,33 +1,39 @@
 using UnityEngine;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 
 public class ProjectileController : MonoBehaviour
 {
-    public event Action<Hittable, Vector3> OnHit;
+    [Header("Lifetime")]
+    [Tooltip("Time in seconds before this projectile auto-destroys.")]
+    public float lifetime;
+
+    [Header("Piercing")]
+    [Tooltip("Number of times this projectile can hit before being destroyed.")]
+    public int PierceCount = 0;
+
+    [Tooltip("Allows infinite piercing when true.")]
+    public bool infinitePiercing = false;
+
+    [Header("Movement")]
+    [Tooltip("Movement logic for this projectile.")]
     public ProjectileMovement movement;
+    public event Action<Hittable, Vector3> OnHit;
 
-    private SpellData spellData;
-    private int pierceCountMax = 0;
-    private int currentPierceCount = 0;
-    private List<GameObject> hitTargets; // To prevent hitting the same target multiple times with one pierce
-
-    void Awake()
+    void Start()
     {
-        hitTargets = new List<GameObject>();
-    }
-
-    public void InitializeSpellData(SpellData sData)
-    {
-        this.spellData = sData;
-        if (this.spellData != null && this.spellData.effects != null)
+        if (movement == null)
         {
-            EffectData pierceEffect = this.spellData.effects.Find(e => e.type.ToLower() == "pierce");
-            if (pierceEffect != null && !string.IsNullOrEmpty(pierceEffect.count))
+            movement = GetComponent<ProjectileMovement>();
+            if (movement == null)
             {
-                int.TryParse(pierceEffect.count, out pierceCountMax);
+                Debug.LogWarning("ProjectileController: Missing ProjectileMovement component.");
             }
+        }
+
+        if (lifetime > 0)
+        {
+            StartCoroutine(Expire());
         }
     }
 
@@ -39,70 +45,53 @@ public class ProjectileController : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("ProjectileController: Movement strategy not set!");
+            Debug.LogWarning("ProjectileController: Cannot move projectile, movement is null.");
         }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // Prevent hitting other projectiles or non-hittable things unless specified
-        if (collision.gameObject.CompareTag("projectile")) return; // Example tag
+        // Ignore collisions with other projectiles
+        if (collision.gameObject.CompareTag("projectile"))
+            return;
 
-        Hittable hittableComponent = collision.gameObject.GetComponent<Hittable>();
-        if (hittableComponent == null)
+        // Handle hitting units
+        if (collision.gameObject.CompareTag("unit"))
         {
-            EnemyController ec = collision.gameObject.GetComponent<EnemyController>();
-            if (ec != null) hittableComponent = ec.hp;
-            else
-            {
-                PlayerController pc = collision.gameObject.GetComponent<PlayerController>();
-                if (pc != null) hittableComponent = pc.hp;
-            }
+            var hittable = collision.gameObject.GetComponent<Hittable>()
+                           ?? collision.gameObject.GetComponent<PlayerController>()?.hp;
+            if (hittable != null)
+                OnHit?.Invoke(hittable, transform.position);
         }
 
-
-        if (hittableComponent != null)
+        // Determine whether to destroy based on piercing settings
+        if (infinitePiercing)
         {
-            // Prevent hitting the same target multiple times with the same piercing projectile
-            if (hitTargets.Contains(collision.gameObject))
-            {
-                return; 
-            }
-            hitTargets.Add(collision.gameObject);
-
-            OnHit?.Invoke(hittableComponent, collision.contacts[0].point); // Invoke the hit event
-
-            currentPierceCount++;
-            if (currentPierceCount > pierceCountMax) 
-            {
-                Destroy(gameObject); 
-                return;
-            }
+            // never destroy
+            return;
         }
-        else
+
+        if (PierceCount > 0)
         {
-            if (!collision.gameObject.CompareTag("Player") && !collision.gameObject.CompareTag("Untagged")) // Avoid destroying on hitting player layer if it's a player projectile, or untagged boundaries
-            {
-                 // If it's not a trigger collider, it implies a solid object.
-                if (!collision.collider.isTrigger) {
-                    OnHit?.Invoke(null, collision.contacts[0].point); 
-                    Destroy(gameObject);
-                }
-            }
+            PierceCount--;
+            return;
         }
+
+        // No piercing left — destroy
+        Destroy(gameObject);
     }
 
     public void SetLifetime(float newLifetime)
     {
-        StartCoroutine(Expire(newLifetime));
+        lifetime = newLifetime;
+        StopAllCoroutines();
+        if (lifetime > 0)
+            StartCoroutine(Expire());
     }
 
-    IEnumerator Expire(float duration) 
+    IEnumerator Expire()
     {
-        yield return new WaitForSeconds(duration);
-        if (this.gameObject != null) // Check if not already destroyed
-        {
-            Destroy(gameObject);
-        }
+        yield return new WaitForSeconds(lifetime);
+        Destroy(gameObject);
     }
 }

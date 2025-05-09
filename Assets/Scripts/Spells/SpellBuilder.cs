@@ -1,69 +1,90 @@
 using UnityEngine;
-using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+
+
+// Chooses a base spell and random modifiers based on the current wave.
 
 public class SpellBuilder
 {
-    public Spell Build(string spellId, SpellCaster owner, int wave, int power)
+    private readonly Dictionary<string, JObject> catalog;
+    private readonly System.Random rng = new System.Random();
+
+    static readonly string[] BaseKeys     = {"arcane_bolt","arcane_spray","magic_missile","arcane_blast", "knockback_bolt"};
+    static readonly string[] ModifierKeys = {"splitter","doubler","damage_amp","speed_amp","chaos","homing","frost_spike_modifier","vampiric_essence_modifier"};
+
+    public SpellBuilder()
     {
-        var data = SpellLibrary.Instance.GetSpellData(spellId);
-        if (data == null)
-        {
-            Debug.LogWarning($"[SpellBuilder] '{spellId}' not found.");
-            return new Spell(owner);
-        }
-
-        // Frost Spike modifier
-        if (spellId == "frost_spike_modifier")
-        {
-            var inner = Build(data.inner_spell, owner, wave, power);
-            return new FrostSpikeModifierSpell(owner, data, inner, wave, power);
-        }
-
-        // Vampiric Essence modifier
-        if (spellId == "vampiric_essence_modifier")
-        {
-            var inner = Build(data.inner_spell, owner, wave, power);
-            return new VampiricEssenceModifierSpell(owner, data, inner, wave, power);
-        }
-
-        // Knockback Bolt base spell
-        if (spellId == "knockback_bolt")
-            return new KnockbackBolt(owner, data, wave, power);
-
-        // generic modifier (fallback)
-        if (!string.IsNullOrEmpty(data.inner_spell))
-        {
-            var inner = Build(data.inner_spell, owner, wave, power);
-            return new ModifierSpell(owner, data, inner, wave, power);
-        }
-
-        // all other base spells
-        return new BaseSpell(owner, data, wave, power);
+        var ta = Resources.Load<TextAsset>("spells");
+        catalog = ta != null
+            ? JsonConvert.DeserializeObject<Dictionary<string,JObject>>(ta.text)
+            : new Dictionary<string,JObject>();
     }
 
-    public Spell BuildRandom(SpellCaster owner, int wave)
+    public Spell Build(SpellCaster owner)
     {
-        int power = owner.spell_power;
-        var all = SpellLibrary.Instance.GetAllSpellIDs();
+        int wave = GetCurrentWave();
+        var vars = new Dictionary<string,float> { ["power"]=owner.spellPower, ["wave"]=wave };
 
-        // pick a random base
-        var baseIds = all.Where(id =>
-            SpellLibrary.Instance.GetSpellData(id).inner_spell == null).ToList();
-        var baseId = baseIds[Random.Range(0, baseIds.Count)];
-        var spell = Build(baseId, owner, wave, power);
+        if (wave <= 1)
+            return BuildBase(owner, "arcane_bolt", vars);
 
-        // apply 0–2 modifiers
-        int mods = Random.Range(0, 3);
-        var modIds = all.Where(id =>
-            !string.IsNullOrEmpty(SpellLibrary.Instance.GetSpellData(id).inner_spell))
-            .ToList();
+        // Pick random base
+        int bidx = rng.Next(BaseKeys.Length);
+        Spell s = BuildBase(owner, BaseKeys[bidx], vars);
 
-        for (int i = 0; i < mods && modIds.Count > 0; i++)
+        // Random number of modifiers
+        int modCount = rng.NextDouble() < 0.3 ? 2 : rng.Next(2);
+        for (int i = 0; i < modCount; i++)
+            s = ApplyModifier(s, ModifierKeys[rng.Next(ModifierKeys.Length)], vars);
+
+        return s;
+    }
+
+    private Spell BuildBase(SpellCaster owner, string key, Dictionary<string,float> vars)
+    {
+        Spell s = key switch
         {
-            string modId = modIds[Random.Range(0, modIds.Count)];
-            spell = Build(modId, owner, wave, power);
-        }
+            "arcane_bolt"     => new ArcaneBolt(owner),
+            "arcane_spray"    => new ArcaneSpray(owner),
+            "magic_missile"   => new MagicMissile(owner),
+            "arcane_blast"    => new ArcaneBlast(owner),
+            "knockback_bolt"  => new KnockbackSpell(owner),  
+            _                 => new ArcaneBolt(owner)
+        };
 
-        return spell;
+        if (catalog.TryGetValue(key, out var json))
+            s.LoadAttributes(json, vars);
+
+        return s;
+    }
+
+
+    private Spell ApplyModifier(Spell inner, string mkey, Dictionary<string,float> vars)
+    {
+        Spell mod = mkey switch
+        {
+            "splitter"                 => new Splitter(inner),
+            "doubler"                  => new Doubler(inner),
+            "damage_amp"               => new DamageMagnifier(inner),
+            "speed_amp"                => new SpeedModifier(inner),
+            "chaos"                    => new ChaoticModifier(inner),
+            "homing"                   => new HomingModifier(inner),
+            "vampiric_essence_modifier"=> new VampiricEssenceModifier(inner),
+            "frost_spike_modifier"     => new FrostSpikeModifier(inner),
+            _                          => inner
+        };
+
+        if (catalog.TryGetValue(mkey, out var json))
+            mod.LoadAttributes(json, vars);
+
+        return mod;
+    }
+    private int GetCurrentWave()
+    {
+        var sp = UnityEngine.Object.FindFirstObjectByType<EnemySpawnerController>();
+        return sp != null ? sp.CurrentWave : 1;
     }
 }

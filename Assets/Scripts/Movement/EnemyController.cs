@@ -1,141 +1,85 @@
 using UnityEngine;
 using System.Collections;
 
+// Controls enemy behavior: movement toward player, attacks, health, and slow effects.
+
 public class EnemyController : MonoBehaviour
 {
-    public Transform target;
-    public int speed;
+    [Header("Combat")]
     public int damage;
+    public float attackCooldown = 2f;
+
+    [Header("Movement")]
+    public int speed;
+    private float currentSpeed;
+
+    [Header("Health")]
     public Hittable hp;
-    public HealthBar healthui; 
-    public bool dead = false;
-    public float last_attack;
+    public HealthBar healthui;
 
-    public Unit unit;
-    private int originalSpeed;
-    private bool isSlowed = false;
-    private Coroutine slowCoroutine;
-    private float attackCooldown = 2f;
+    private Transform playerTransform;
+    private float lastAttackTime;
+    private bool dead;
 
-    void Start()
+    private void Start()
     {
-        unit = GetComponent<Unit>();
-        if (unit == null) Debug.LogError($"EnemyController on {gameObject.name} is missing a Unit component.");
+        playerTransform = GameManager.Instance.player.transform;
+        currentSpeed = speed;
 
-        if (GameManager.Instance != null && GameManager.Instance.player != null)
-        {
-            target = GameManager.Instance.player.transform;
-        }
-
-        if (hp != null)
-        {
-            hp.OnDeath += Die;
-            if (healthui != null) healthui.SetHealth(hp);
-        }
-        else
-        {
-            Debug.LogError($"EnemyController on {gameObject.name} does not have hp (Hittable) assigned by Spawner!");
-        }
-        
-        originalSpeed = this.speed;
-        dead = false;
+        // Subscribe to death and health change
+        hp.OnDeath += Die;
+        hp.OnHealthChanged += (_, __) => healthui.SetHealth(hp);
+        healthui.SetHealth(hp);
     }
 
-    void Update()
-    {
-        if (dead)
-        {
-            if (unit != null) unit.movement = Vector2.zero;
-            return;
-        }
-
-        if (GameManager.Instance.state == GameManager.GameState.GAMEOVER || Time.timeScale == 0f)
-        {
-            if (unit != null) unit.movement = Vector2.zero;
-            return;
-        }
-
-        if (target != null && unit != null)
-        {
-            Vector3 direction = target.position - transform.position;
-            float currentAttackRange = 2f;
-
-            if (direction.magnitude > currentAttackRange)
-            {
-                unit.movement = direction.normalized * this.speed;
-
-            }
-            else
-            {
-                unit.movement = Vector2.zero;
-
-                DoAttack();
-            }
-        }
-        else if (unit != null)
-        {
-            unit.movement = Vector2.zero;
-        }
-    }
-    
-    void DoAttack()
-    {
-        if (dead || target == null) return;
-
-        if (Time.time > last_attack + attackCooldown)
-        {
-            last_attack = Time.time;
-            PlayerController pc = target.gameObject.GetComponent<PlayerController>();
-            if (pc != null && pc.hp != null)
-            {
-                pc.hp.Damage(new Damage(this.damage, Damage.Type.PHYSICAL)); 
-            }
-        }
-    }
-
-    void Die()
-    {
-        if (!dead)
-        {
-            dead = true;
-            if (slowCoroutine != null)
-            {
-                StopCoroutine(slowCoroutine);
-                this.speed = originalSpeed;
-            }
-            isSlowed = false;
-
-            if (GameManager.Instance != null) GameManager.Instance.RemoveEnemy(gameObject);
-            Destroy(gameObject);
-        }
-    }
-
-
-    public void ApplySlow(float slowPercentage, float duration)
+    private void Update()
     {
         if (dead) return;
 
-        if (isSlowed && slowCoroutine != null)
+        Vector3 direction = playerTransform.position - transform.position;
+        if (direction.magnitude < 2f)
         {
-            StopCoroutine(slowCoroutine);
-        } else if (!isSlowed) {
-            originalSpeed = this.speed; // Store original speed only when not already slowed
+            TryAttack();
         }
-
-        this.speed = Mathf.Max(0, Mathf.RoundToInt(originalSpeed * (1f - Mathf.Clamp01(slowPercentage))));
-        isSlowed = true;
-        
-        slowCoroutine = StartCoroutine(RevertSpeedAfterDuration(duration));
+        else
+        {
+            // Move towards player
+            GetComponent<Unit>().movement = direction.normalized * currentSpeed;
+        }
     }
 
-    private IEnumerator RevertSpeedAfterDuration(float duration)
+    private void TryAttack()
     {
-        yield return new WaitForSeconds(duration);
-        if (!dead) // Only revert if not dead during the slow
+        if (Time.time >= lastAttackTime + attackCooldown)
         {
-            this.speed = originalSpeed;
-            isSlowed = false;
+            lastAttackTime = Time.time;
+            // Damage player
+            var playerHp = playerTransform.GetComponent<PlayerController>().hp;
+            playerHp.Damage(new Damage(damage, Damage.Type.PHYSICAL));
         }
-        slowCoroutine = null;
+    }
+
+    // <param name="duration">Duration of slow in seconds.</param>
+    // <param name="slowFactor">Multiplier to speed (0 to 1).</param>
+    public void ApplySlow(float duration, float slowFactor)
+    {
+        // Prevent stacking slows
+        StopAllCoroutines();
+        StartCoroutine(SlowRoutine(duration, slowFactor));
+    }
+
+    private IEnumerator SlowRoutine(float duration, float slowFactor)
+    {
+        currentSpeed = speed * slowFactor;
+        yield return new WaitForSeconds(duration);
+        currentSpeed = speed;
+    }
+
+    private void Die()
+    {
+        if (dead) return;
+        dead = true;
+        GameManager.Instance.RemoveEnemy(gameObject);
+        Destroy(gameObject);
     }
 }

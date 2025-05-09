@@ -1,121 +1,103 @@
+// File: Assets/Scripts/RPNEvaluator.cs
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Globalization;
 
 public static class RPNEvaluator
 {
-    public static int Evaluate(string expression, Dictionary<string, int> variables)
+    public static int Evaluate(string expression, Dictionary<string,int> variables)
     {
-        Stack<int> stack = new Stack<int>();
-        string[] tokens = expression.Split(' ');
+        if (string.IsNullOrWhiteSpace(expression))
+            throw new ArgumentException("Expression empty", nameof(expression));
 
-        foreach (var token in tokens)
+        var stack = new Stack<int>();
+        foreach (var tok in expression.Split(' '))
         {
-            if (int.TryParse(token, out int number))
+            if (variables != null && variables.TryGetValue(tok, out int v))
             {
-                stack.Push(number);
+                stack.Push(v);
             }
-            else if (variables.ContainsKey(token))
+            else if (int.TryParse(tok, out int i))
             {
-                stack.Push(variables[token]);
+                stack.Push(i);
             }
             else
             {
-                if (stack.Count < 2)
+                int b = stack.Pop(), a = stack.Pop(), r;
+                switch (tok)
                 {
-                    Debug.LogError($"Malformed RPN expression: {expression}");
-                    return 0;
+                    case "+": r = a + b; break;
+                    case "-": r = a - b; break;
+                    case "*": r = a * b; break;
+                    case "/": r = a / b; break;
+                    case "%": r = a % b; break;
+                    default:  throw new InvalidOperationException($"Unknown op {tok}");
                 }
-
-                int b = stack.Pop();
-                int a = stack.Pop();
-                int result = token switch
-                {
-                    "+" => a + b,
-                    "-" => a - b,
-                    "*" => a * b,
-                    "/" => (b != 0) ? a / b : 0,
-                    "%" => (b != 0) ? a % b : 0,
-                    _ => throw new Exception($"Unknown operator '{token}'")
-                };
-
-                stack.Push(result);
+                stack.Push(r);
             }
-        }
-
-        if (stack.Count != 1)
-        {
-            Debug.LogError($"Malformed RPN expression (stack left with {stack.Count} values): {expression}");
-            return 0;
         }
 
         return stack.Pop();
     }
-}
 
-public static class RPNEvaluatorInt
-{
-    public static int Evaluate(string expression, int wave, int power)
+    public static int SafeEvaluate(string expression, Dictionary<string,int> variables, int fallback)
     {
-        var vars = new Dictionary<string, float>
+        try
         {
-            { "wave", wave },
-            { "power", power }
-        };
-        return Mathf.RoundToInt(RPNEvaluatorFloat.EvaluateInternal(expression, vars));
-    }
-}
-
-public static class RPNEvaluatorFloat
-{
-    public static float Evaluate(string expression, int wave, int power)
-    {
-        var vars = new Dictionary<string, float>
+            return Evaluate(expression, variables);
+        }
+        catch (Exception ex)
         {
-            { "wave", wave },
-            { "power", power }
-        };
-        return EvaluateInternal(expression, vars);
+            Debug.LogWarning($"RPN SafeEvaluate failed for '{expression}': {ex.Message}");
+            return fallback;
+        }
     }
 
-    public static float EvaluateInternal(string expression, Dictionary<string, float> variables)
+    public static float EvaluateFloat(string expression, Dictionary<string,float> variables)
     {
-        if (string.IsNullOrWhiteSpace(expression)) return 0f;
+        if (string.IsNullOrWhiteSpace(expression))
+            throw new ArgumentException("Expression empty", nameof(expression));
 
-        Stack<float> stack = new Stack<float>();
-        string[] tokens = expression.Split(' ');
-
-        foreach (var token in tokens)
+        var stack = new Stack<float>();
+        foreach (var tok in expression.Split(' '))
         {
-            if (float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out float number))
+            if (variables != null && variables.TryGetValue(tok, out float v))
             {
-                stack.Push(number);
+                stack.Push(v);
             }
-            else if (variables.ContainsKey(token))
+            else if (float.TryParse(tok, out float f))
             {
-                stack.Push(variables[token]);
+                stack.Push(f);
             }
             else
             {
-                if (stack.Count < 2) throw new Exception($"Malformed RPN expression: '{expression}'");
-
-                float b = stack.Pop();
-                float a = stack.Pop();
-
-                switch (token)
+                float b = stack.Pop(), a = stack.Pop(), r;
+                switch (tok)
                 {
-                    case "+": stack.Push(a + b); break;
-                    case "-": stack.Push(a - b); break;
-                    case "*": stack.Push(a * b); break;
-                    case "/": stack.Push(b != 0 ? a / b : 0); break;
-                    case "%": stack.Push(a % b); break;
-                    default: throw new Exception($"Unknown operator '{token}'");
+                    case "+": r = a + b; break;
+                    case "-": r = a - b; break;
+                    case "*": r = a * b; break;
+                    case "/": r = a / b; break;
+                    default:  throw new InvalidOperationException($"Unknown op {tok}");
                 }
+                stack.Push(r);
             }
         }
 
-        return stack.Count == 1 ? stack.Pop() : throw new Exception($"Invalid RPN expression: '{expression}'");
+        return stack.Pop();
+    }
+
+    public static float SafeEvaluateFloat(string expression, Dictionary<string, float> variables, float fallback = 0f)
+    {
+        try
+        {
+            return EvaluateFloat(expression, variables);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"RPN SafeEvaluateFloat failed for '{expression}': {ex.Message}");
+            return fallback;
+        }
     }
 }
-

@@ -3,12 +3,12 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
 
-public class GameOverUI : MonoBehaviour
+
+public class GameWinUIManager : MonoBehaviour
 {
-    public GameObject gameOverUI;
+    public GameObject gameWinUI;
 
     public TextMeshProUGUI titleText;
-    public TextMeshProUGUI currentWaveText;
     public TextMeshProUGUI totalEnemiesKilledText;
     public Button returnButton;
 
@@ -16,7 +16,7 @@ public class GameOverUI : MonoBehaviour
 
     void Start()
     {
-        if (gameOverUI != null) gameOverUI.SetActive(false);
+        if (gameWinUI != null) gameWinUI.SetActive(false);
         if (returnButton != null) returnButton.onClick.AddListener(ReturnToMenu);
 
         prevState = GameManager.Instance.state;
@@ -28,41 +28,37 @@ public class GameOverUI : MonoBehaviour
 
         if (state == prevState) return;
 
-        if (state == GameManager.GameState.GAMEOVER && GameManager.Instance.IsPlayerDead)
+        if (state == GameManager.GameState.GAMEOVER && !GameManager.Instance.IsPlayerDead)
         {
-            ShowGameOver();
+            ShowVictory();
         }
         else
         {
-            if (gameOverUI != null)
-                gameOverUI.SetActive(false);
+            if (gameWinUI != null)
+                gameWinUI.SetActive(false);
         }
 
         prevState = state;
     }
 
-    void ShowGameOver()
+    void ShowVictory()
     {
         if (titleText != null)
-            titleText.text = "Game Over!";
-
-        if (currentWaveText != null)
-            currentWaveText.text = $"Total Waves Completed: {GameManager.Instance.wavesCompleted}";
+            titleText.text = "You Won!";
 
         if (totalEnemiesKilledText != null)
             totalEnemiesKilledText.text = $"Enemies You Killed: {GameManager.Instance.totalEnemiesKilled}";
 
-        if (gameOverUI != null)
-            gameOverUI.SetActive(true);
+        if (gameWinUI != null)
+            gameWinUI.SetActive(true);
     }
 
     void ReturnToMenu()
     {
-        var cam = Camera.main;
-        if (cam != null)
-            Destroy(cam.gameObject);
+
 
         GameManager.Instance.ResetGame();
         SceneManager.LoadScene("Main");
     }
+
 }

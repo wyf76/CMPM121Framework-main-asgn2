@@ -2,42 +2,50 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 
-public class SpellCaster
+// Handles mana, spell slots, and the actual casting process.
+
+public class SpellCaster : MonoBehaviour
 {
-    public int mana;
-    public int max_mana;
-    public int mana_reg;
-    public Hittable.Team casterTeam;
-    public int spell_power;
-    public int level;
-    public Spell spell;
+    [Header("Mana Settings")] public int max_mana;
+    [Header("Mana Settings")] public int mana;
+    [Header("Mana Settings")] public int mana_reg;
 
-    public GameObject CasterGameObject { get; private set; } 
+    [Header("Team")] public Hittable.Team team;
+    [Header("Spells")] public int spellPower;
+    [Header("Spells")] public List<Spell> spells = new(4);
 
-    public SpellCaster(int mana, int mana_reg, Hittable.Team team, int power, int level)
+    void Awake()
     {
-        this.mana = mana;
-        this.max_mana = mana; // Initial max mana is current mana
-        this.mana_reg = mana_reg;
-        this.casterTeam = team;
-        this.spell_power = power;
-        this.level = level;
+        StartCoroutine(ManaRegeneration());
+        InitializeSlots();
     }
 
-    public void SetCasterGameObject(GameObject casterGO) 
+    private void InitializeSlots()
     {
-        this.CasterGameObject = casterGO;
+        var builder = new SpellBuilder();
+        spells[0] = builder.Build(this);
+        for (int i = 1; i < spells.Count; i++)
+            spells[i] = null;
     }
-    
-    public IEnumerator ManaRegeneration()
+
+    private IEnumerator ManaRegeneration()
     {
         while (true)
         {
-            if (mana < max_mana)
-            {
-                mana = Mathf.Min(mana + mana_reg, max_mana);
-            }
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(1f);
+            mana = Mathf.Min(max_mana, mana + mana_reg);
         }
+    }
+
+    public IEnumerator CastSlot(int slot, Vector3 from, Vector3 to)
+    {
+        if (slot < 0 || slot >= spells.Count) yield break;
+        var s = spells[slot];
+        if (s == null || !s.IsReady || mana < s.Mana) yield break;
+
+        Debug.Log($"[SpellCaster] Casting {s.DisplayName} (Mana: {mana}/{s.Mana})");
+        mana -= Mathf.RoundToInt(s.Mana);
+        s.lastCast = Time.time;
+        yield return s.TryCast(from, to);
     }
 }

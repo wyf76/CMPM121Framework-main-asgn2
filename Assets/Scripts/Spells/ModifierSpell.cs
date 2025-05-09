@@ -1,71 +1,45 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
-public class ModifierSpell : Spell
+public abstract class ModifierSpell : Spell
 {
-    protected readonly SpellData data;
     protected readonly Spell inner;
-    protected readonly int wave;
-    protected readonly int power;
 
-    public ModifierSpell(
-        SpellCaster owner,
-        SpellData data,
-        Spell inner,
-        int wave,
-        int power
-    ) : base(owner)
+    protected ModifierSpell(Spell inner) : base(inner.Owner)
     {
-        this.data  = data;
         this.inner = inner;
-        this.wave  = wave;
-        this.power = power;
+        mods = new StatBlock();
+        InjectMods(mods);
     }
 
-    public override IEnumerator Cast(Vector3 where, Vector3 target, Hittable.Team team)
+    public Spell InnerSpell => inner;
+    public override string DisplayName => $"{inner.DisplayName} {Suffix}";
+    public override int IconIndex => inner.IconIndex;
+    protected abstract string Suffix { get; }
+
+
+    protected override float BaseDamage   => inner.Damage;
+    protected override float BaseMana     => inner.Mana;
+    protected override float BaseCooldown => inner.Cooldown;
+    protected override float BaseSpeed    => inner.Speed;
+
+    public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
     {
-        this.team = team;
-
-        if (data.name.ToLower().Contains("doubler"))
-        {
-            yield return inner.Cast(where, target, team);
-            yield return new WaitForSeconds(0.2f);
-            yield return inner.Cast(where, target, team);
-        }
-        else if (data.name.ToLower().Contains("splitter"))
-        {
-            yield return inner.Cast(where, target, team);
-            Vector3 offsetDir = Quaternion.Euler(0, 0, 3f) * (target - where);
-            yield return inner.Cast(where, where + offsetDir, team);
-        }
-        else
-        {
-            yield return inner.Cast(where, target, team);
-        }
+        mods = new StatBlock();
+        InjectMods(mods);
     }
 
-    public override int GetManaCost()
+    protected override IEnumerator Cast(Vector3 o, Vector3 t)
     {
-        int baseCost = inner.GetManaCost();
-        if (data.name.ToLower().Contains("damage amp"))
-            return Mathf.RoundToInt(baseCost * 1.5f);
-        if (data.name.ToLower().Contains("chaos"))
-            return baseCost + 5;
-        return baseCost;
+        yield return ApplyModifierEffect(o, t);
     }
 
-    public override int GetDamage()
+    protected virtual IEnumerator ApplyModifierEffect(Vector3 o, Vector3 t)
     {
-        int baseDamage = inner.GetDamage();
-        if (data.name.ToLower().Contains("damage amp"))
-            return Mathf.RoundToInt(baseDamage * 1.5f);
-        if (data.name.ToLower().Contains("chaos"))
-            return Mathf.RoundToInt(baseDamage * 2f);
-        if (data.name.ToLower().Contains("homing"))
-            return Mathf.RoundToInt(baseDamage * 0.7f);
-        return baseDamage;
+        yield return inner.TryCast(o, t);
     }
 
-    public override float GetCooldown()  => inner.GetCooldown();
-    public override int   GetIcon()      => inner.GetIcon();
+    protected abstract void InjectMods(StatBlock mods);
 }
