@@ -20,24 +20,24 @@ public class ProjectileData
 [System.Serializable]
 public class EffectData 
 {
-    public string type; 
-
-    // For Pierce
+    public string type;
+    // Pierce
     public string count;
 
-    // For Chill
-    public string duration;    
-    public string slow_factor; 
+    // Chill
+    public string duration;
+    public string slow_factor;
 
-    // For Chain Reaction
-    public string chance;              
-    public string secondary_spell_id;  
-    public string radius;              
+    // Chain reaction (if used)
+    public string chance;
+    public string secondary_spell_id;
+    public string radius;
 
-    // For Lifesteal
-    public string percent;             
+    // Lifesteal
+    public string percent;
 
-
+    // Knockback
+    public string force;
 }
 
 [System.Serializable]
@@ -46,29 +46,29 @@ public class SpellData
     public string name;
     public string description;
     public int icon;
-    public DamageData damage;     
-    public string mana_cost;         
-    public string cooldown;         
-  
+    public DamageData damage;
+    public string mana_cost;
+    public string cooldown;
+
     public ProjectileData projectile;
+    public string inner_spell;
 
-  
-    public string inner_spell; 
-
-    public string damage_multiplier;   
+    // Stat modifiers
+    public string damage_multiplier;
     public string mana_multiplier;
-    public string mana_adder;          
-    public string speed_multiplier;  
-    public string cooldown_multiplier; 
-    public string delay;            
-    public string angle;           
-    public string projectile_trajectory; 
+    public string mana_adder;
+    public string speed_multiplier;
+    public string cooldown_multiplier;
+    public string delay;
+    public string angle;
+    public string projectile_trajectory;
 
-
-    public string N;             
-    public string secondary_damage;  
+    // Secondary projectile
+    public string N;
+    public string secondary_damage;
     public ProjectileData secondary_projectile;
-    public string spray;            
+    public string spray;
 
-    public List<EffectData> effects; 
+    // List of on-hit effects
+    public List<EffectData> effects;
 }

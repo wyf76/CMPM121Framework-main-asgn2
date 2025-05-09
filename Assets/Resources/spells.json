@@ -76,51 +76,44 @@
        "damage_multiplier": "0.75",
        "mana_adder": "10",
        "projectile_trajectory": "homing"
-   }, 
-    "frost_spike": {
+   },
+    "frost_spike_modifier": {
     "name": "Frost Spike",
-    "description": "Pierces enemies and applies a chilling slow on hit.",
+    "description": "Projectiles chill on hit.",
     "icon": 10,
-    "damage": "12 power +",
-    "mana_cost": "15 power +",
-    "cooldown": "1.5",
-    "projectile": {
-        "trajectory": "straight",
-        "speed": "8",
-        "sprite": 4,
-        "piercing": true
-    },
-    "effects": [
-        { "type": "chill", "duration": "2.0", "slow_factor": "0.5" },
-        { "type": "pierce", "count": "1" }
-    ]
-    },
-
-    "chain_reaction_modifier": {
-    "name": "Chain Reaction",
-    "description": "On hit, may trigger a secondary weaker spell at a nearby enemy.",
-    "icon": 11,
-    "mana_cost": "8 power +",
+    "mana_cost": "5",
+    "cooldown": "0",
+    "inner_spell": "base_spell_id",
     "type": "modifier",
     "effects": [
-        {
-        "type": "chain_reaction",
-        "chance": "0.25",
-        "secondary_spell_id": "frost_spike",
-        "radius": "3.0"
-        }
+    { "type": "pierce", "count": "1" },
+    { "type": "chill", "duration": "2.0", "slow_factor": "0.5" }
     ]
     },
 
     "vampiric_essence_modifier": {
     "name": "Vampiric Essence",
-    "description": "Steals a percentage of damage dealt back as health.",
+    "description": "Life steals damage dealt.",
     "icon": 12,
-    "mana_cost": "12 power +",
+    "mana_cost": "8",
+    "cooldown": "0",
+    "inner_spell": "base_spell_id",
     "type": "modifier",
     "effects": [
-        { "type": "lifesteal", "percent": "0.2" }
+    { "type": "lifesteal", "percent": "0.2" }
+    ]
+    },
+
+    "knockback_bolt": {
+    "name": "Knockback Bolt",
+    "description": "Knocks foes back on impact.",
+    "icon": 13,
+    "damage": { "amount": "8 power +", "type": "physical" },
+    "mana_cost": "12 power +",
+    "cooldown": "1.2",
+    "projectile": { "trajectory": "straight", "speed": "10", "sprite": 5 },
+    "effects": [
+    { "type": "knockback", "force": "5 power *" }
     ]
     }
-
 }

@@ -9,29 +9,26 @@ public class Hittable
     public int hp;
     public int max_hp;
 
-    public GameObject owner; // The GameObject this Hittable component belongs to
+    public GameObject owner; 
 
-    // Existing Damage method
     public void Damage(Damage damage)
     {
-        if (owner == null) // Safety check
+        if (owner == null) 
         {
             Debug.LogError("Hittable.Damage: Owner GameObject is null!");
             return;
         }
-        EventBus.Instance.DoDamage(owner.transform.position, damage, this); // Assuming EventBus and DoDamage exist
+        EventBus.Instance.DoDamage(owner.transform.position, damage, this);
         hp -= damage.amount;
-        // Debug.Log($"{owner.name} took {damage.amount} {damage.type} damage, HP: {hp}/{max_hp}");
         if (hp <= 0)
         {
             hp = 0;
-            OnDeath?.Invoke(); // Use null-conditional operator for safety
+            OnDeath?.Invoke();
         }
     }
 
     public event Action OnDeath;
-    // --- NEW ---
-    public event Action<int> OnHeal; // Optional: event for when healing occurs
+    public event Action<int> OnHeal; 
 
     public Hittable(int hp, Team team, GameObject owner)
     {
@@ -51,7 +48,6 @@ public class Hittable
         this.hp = Mathf.Clamp(this.hp, 0, this.max_hp); // Ensure HP is within bounds
     }
 
-    // --- NEW Heal METHOD ---
     public void Heal(int amount)
     {
         if (amount <= 0) return; // Don't heal for non-positive amounts
@@ -61,7 +57,6 @@ public class Hittable
         {
             hp = max_hp;
         }
-        OnHeal?.Invoke(amount); // Invoke optional heal event
-        // Debug.Log($"{owner?.name} healed for {amount}, HP: {hp}/{max_hp}");
+        OnHeal?.Invoke(amount); 
     }
 }

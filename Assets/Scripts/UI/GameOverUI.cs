@@ -17,7 +17,7 @@ public class GameOverUI : MonoBehaviour
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
 
-        // hide immediately (before first frame)
+        // hide immediately 
         panel.SetActive(false);
     }
 

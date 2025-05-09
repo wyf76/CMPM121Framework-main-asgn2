@@ -27,18 +27,4 @@ public class VampiricEssenceModifierSpell : ModifierSpell
     {
         yield return inner.Cast(castPosition, targetPosition, casterTeam);
     }
-
-    protected override void OnProjectileHit(
-        Hittable other,
-        Vector3 impactPoint,
-        SpellData spellData
-    )
-    {
-        base.OnProjectileHit(other, impactPoint, spellData);
-
-        if (_lifeStealPct <= 0f) return;
-        int dmg = RPNEvaluatorInt.Evaluate(spellData.damage.amount, wave, power);
-        int heal = Mathf.RoundToInt(dmg * _lifeStealPct);
-        owner.Heal(heal);
-    }
 }

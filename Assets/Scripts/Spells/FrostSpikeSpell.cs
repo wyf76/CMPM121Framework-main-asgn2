@@ -1,15 +1,16 @@
 using UnityEngine;
 using System.Collections;
+using System.Linq;
 
-public class FrostSpikeSpell : BaseSpell
+public class FrostSpikeModifierSpell : ModifierSpell
 {
-    public FrostSpikeSpell(
-        SpellCaster owner,
-        SpellData data,
-        int wave,
-        int power
-    ) : base(owner, data, wave, power)
-    { }
+    public FrostSpikeModifierSpell(
+    SpellCaster owner,
+    SpellData data,
+    Spell inner,
+    int wave,
+    int power
+    ) : base(owner, data, inner, wave, power) {}
 
     public override IEnumerator Cast(
         Vector3 castPosition,
@@ -17,10 +18,7 @@ public class FrostSpikeSpell : BaseSpell
         Hittable.Team casterTeam
     )
     {
-        // BaseSpell handles:
-        //  • mana check
-        //  • CreateProjectile(...)
-        //  • OnProjectileHit → base damage + any data.effects of type "chill"
+        // add chill and pierce via JSON effects handled by BaseSpell.OnProjectileHit
         yield return base.Cast(castPosition, targetPosition, casterTeam);
     }
 }

@@ -22,6 +22,10 @@ public class SpellUI : MonoBehaviour
 
     public void SetSpell(Spell spell)
     {
+        if (spell == null) {
+        Debug.LogWarning("SpellUI.SetSpell called with null spell");
+        return;
+        }
         this.spell = spell;
         GameManager.Instance.spellIconManager.PlaceSprite(spell.GetIcon(), icon.GetComponent<Image>());
     }
