@@ -7,42 +7,37 @@ public class SpellCaster
     public int mana;
     public int max_mana;
     public int mana_reg;
+    public Hittable.Team casterTeam;
     public int spell_power;
-    public int current_wave;
-
-    public Hittable.Team team;
+    public int level;
     public Spell spell;
 
+    public GameObject CasterGameObject { get; private set; } 
+
+    public SpellCaster(int mana, int mana_reg, Hittable.Team team, int power, int level)
+    {
+        this.mana = mana;
+        this.max_mana = mana; // Initial max mana is current mana
+        this.mana_reg = mana_reg;
+        this.casterTeam = team;
+        this.spell_power = power;
+        this.level = level;
+    }
+
+    public void SetCasterGameObject(GameObject casterGO) 
+    {
+        this.CasterGameObject = casterGO;
+    }
+    
     public IEnumerator ManaRegeneration()
     {
         while (true)
         {
-            mana += mana_reg;
-            mana = Mathf.Min(mana, max_mana);
-            yield return new WaitForSeconds(1);
+            if (mana < max_mana)
+            {
+                mana = Mathf.Min(mana + mana_reg, max_mana);
+            }
+            yield return new WaitForSeconds(1.0f);
         }
-    }
-
-    public SpellCaster(int mana, int mana_reg, Hittable.Team team, int spell_power, int current_wave)
-    {
-        this.mana = mana;
-        this.max_mana = mana;
-        this.mana_reg = mana_reg;
-        this.spell_power = spell_power;
-        this.current_wave = current_wave;
-        this.team = team;
-
-        // Give the player an initial spell
-        spell = new SpellBuilder().Build("arcane_bolt", this, current_wave, spell_power);
-    }
-
-    public IEnumerator Cast(Vector3 where, Vector3 target)
-    {
-        if (mana >= spell.GetManaCost() && spell.IsReady())
-        {
-            mana -= spell.GetManaCost();
-            yield return spell.Cast(where, target, team);
-        }
-        yield break;
     }
 }

@@ -130,23 +130,70 @@ public class BaseSpell : Spell
         }
     }
 
-    protected virtual void ApplyEffect(Hittable target, Vector3 impactPoint, EffectData effectData, SpellData spellData)
+    protected virtual void ApplyEffect(
+        Hittable target,
+        Vector3 impactPoint,
+        EffectData effectData,
+        SpellData spellData
+    )
     {
         if (target == null || effectData == null) return;
+        var wave  = this.wave;
+        var power = this.power;
 
         switch (effectData.type.ToLower())
         {
             case "chill":
-                EnemyController ec = target.owner?.GetComponent<EnemyController>();
+                var ec = target.owner?.GetComponent<EnemyController>();
                 if (ec != null)
                 {
-                    float duration = RPNEvaluatorFloat.Evaluate(effectData.duration, wave, power);
-                    float slowFactor = RPNEvaluatorFloat.Evaluate(effectData.slow_factor, wave, power);
-                    ec.ApplySlow(slowFactor, duration);
+                    float dur  = RPNEvaluatorFloat.Evaluate(effectData.duration, wave, power);
+                    float slow = RPNEvaluatorFloat.Evaluate(effectData.slow_factor, wave, power);
+                    ec.ApplySlow(slow, dur);
                 }
+                break;
+
+            // ——— Pierce: mark the projectile piercing ————
+            case "pierce":
+                int cnt = RPNEvaluatorInt.Evaluate(effectData.count, wave, power);
+                if (cnt > 0 && lastProjectile != null)
+                    lastProjectile.Piercing = true;
+                break;
+
+            // ——— Chain Reaction: spawn a secondary spell ——
+            case "chain_reaction":
+                float chance = RPNEvaluatorFloat.Evaluate(effectData.chance, wave, power);
+                if (Random.value <= chance && !string.IsNullOrEmpty(effectData.secondary_spell_id))
+                {
+                    float radius = RPNEvaluatorFloat.Evaluate(effectData.radius, wave, power);
+                    var next = EnemyManager.Instance
+                        .GetNearestEnemy(impactPoint, radius, exclude: target);
+                    if (next != null)
+                    {
+                        Vector3 dir = (next.Position - impactPoint).normalized;
+                        var builder = new SpellBuilder();
+                        var secSpell = builder.Build(
+                            effectData.secondary_spell_id,
+                            owner,
+                            wave,
+                            power
+                        );
+                        owner.StartCoroutine(
+                            secSpell.Cast(impactPoint, impactPoint + dir, target.team)
+                        );
+                    }
+                }
+                break;
+
+            // ——— Lifesteal: heal the caster ————————
+            case "lifesteal":
+                int dmg = RPNEvaluatorInt.Evaluate(spellData.damage.amount, wave, power);
+                float pct = RPNEvaluatorFloat.Evaluate(effectData.percent, wave, power);
+                owner.Heal(Mathf.RoundToInt(dmg * pct));
                 break;
         }
     }
+
 
     private void HandleArcaneBlastSecondary(Vector3 impactPoint, SpellData spellData)
     {

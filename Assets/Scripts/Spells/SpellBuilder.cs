@@ -1,70 +1,62 @@
 using UnityEngine;
-using System.IO;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-using System.Collections.Generic;
 using System.Linq;
 
-public class SpellBuilder 
+public class SpellBuilder
 {
-
     public Spell Build(string spellId, SpellCaster owner, int wave, int power)
     {
-        SpellData data = SpellLibrary.Instance.GetSpellData(spellId);
+        var data = SpellLibrary.Instance.GetSpellData(spellId);
         if (data == null)
         {
-            Debug.LogWarning($"[SpellBuilder] Spell ID '{spellId}' not found, using default.");
-            return new Spell(owner); // fallback
+            Debug.LogWarning($"[SpellBuilder] '{spellId}' not found.");
+            return new Spell(owner);
         }
 
+        // custom base spell
+        if (spellId == "frost_spike")
+            return new FrostSpikeSpell(owner, data, wave, power);
+
+        // custom modifiers
+        if (spellId == "chain_reaction_modifier")
+        {
+            var inner = Build(data.inner_spell, owner, wave, power);
+            return new ChainReactionModifierSpell(owner, data, inner, wave, power);
+        }
+        if (spellId == "vampiric_essence_modifier")
+        {
+            var inner = Build(data.inner_spell, owner, wave, power);
+            return new VampiricEssenceModifierSpell(owner, data, inner, wave, power);
+        }
+
+        // generic modifier
         if (!string.IsNullOrEmpty(data.inner_spell))
         {
-            // It's a modifier — recursively build inner spell
-            Spell inner = Build(data.inner_spell, owner, wave, power);
+            var inner = Build(data.inner_spell, owner, wave, power);
             return new ModifierSpell(owner, data, inner, wave, power);
         }
-        else
-        {
-            // Base spell
-            return new BaseSpell(owner, data, wave, power);
-        }
-    }
 
-   
-    public SpellBuilder()
-    {        
+        // all other base spells
+        return new BaseSpell(owner, data, wave, power);
     }
 
     public Spell BuildRandom(SpellCaster owner, int wave)
     {
         int power = owner.spell_power;
+        var all = SpellLibrary.Instance.GetAllSpellIDs();
 
-        // 1. Choose random base spell
-        List<string> baseSpellIds = SpellLibrary.Instance.GetAllSpellIDs().Where(id =>
+        var bases = all.Where(id =>
+            SpellLibrary.Instance.GetSpellData(id).inner_spell == null).ToList();
+        var baseId = bases[Random.Range(0, bases.Count)];
+        var spell = Build(baseId, owner, wave, power);
+
+        int mods = Random.Range(0, 3);
+        var modifiers = all.Where(id =>
+            SpellLibrary.Instance.GetSpellData(id).inner_spell != null).ToList();
+
+        for (int i = 0; i < mods && modifiers.Count > 0; i++)
         {
-            SpellData d = SpellLibrary.Instance.GetSpellData(id);
-            return d != null && string.IsNullOrEmpty(d.inner_spell);
-        }).ToList();
-
-        string baseId = baseSpellIds[Random.Range(0, baseSpellIds.Count)];
-        Spell spell = Build(baseId, owner, wave, power);
-
-        // 2. Add 0–2 random modifier spells
-        int modifierCount = Random.Range(0, 3);
-
-        for (int i = 0; i < modifierCount; i++)
-        {
-            List<string> modifierIds = SpellLibrary.Instance.GetAllSpellIDs().Where(id =>
-            {
-                SpellData d = SpellLibrary.Instance.GetSpellData(id);
-                return d != null && !string.IsNullOrEmpty(d.inner_spell);
-            }).ToList();
-
-            if (modifierIds.Count == 0) break;
-
-            string modId = modifierIds[Random.Range(0, modifierIds.Count)];
-            SpellData modData = SpellLibrary.Instance.GetSpellData(modId);
-            spell = new ModifierSpell(owner, modData, spell, wave, power);
+            var modId = modifiers[Random.Range(0, modifiers.Count)];
+            spell = Build(modId, owner, wave, power);
         }
 
         return spell;

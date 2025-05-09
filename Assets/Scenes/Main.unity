@@ -586,7 +586,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &96316928
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2330,7 +2330,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &457295003
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3229,7 +3229,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &672798489
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3510,8 +3510,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11b560e9fd09c48439bdddb60b27963d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  panel: {fileID: 733145545}
-  messageText: {fileID: 0}
 --- !u!223 &733145552
 Canvas:
   m_ObjectHideFlags: 0
@@ -3927,7 +3925,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &797691354
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5671,6 +5669,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1316251274}
+  - component: {fileID: 1316251275}
   m_Layer: 0
   m_Name: SpawnPoints
   m_TagString: Untagged
@@ -5700,6 +5699,18 @@ Transform:
   - {fileID: 587991942}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1316251275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1316251273}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ea6f09f30968b2419a5537c10b619e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1385233995
 GameObject:
   m_ObjectHideFlags: 0
