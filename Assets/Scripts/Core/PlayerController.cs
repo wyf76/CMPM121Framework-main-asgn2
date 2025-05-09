@@ -38,15 +38,7 @@ public class PlayerController : MonoBehaviour
         spells[0] = startingSpell;
         spellUIContainer.spellUIs[0].SetActive(true);
         spellUIContainer.spellUIs[0].GetComponent<SpellUI>().SetSpell(startingSpell);
-
-        int initialMana = RPNEvaluatorInt.Evaluate("90 wave 10 * +", GameManager.Instance.wave, 0); 
-        int initialRegen = RPNEvaluatorInt.Evaluate("10 wave +", GameManager.Instance.wave, 0);
-        int initialPower = RPNEvaluatorInt.Evaluate("wave 10 *", GameManager.Instance.wave, 0); 
-
-        spellcaster = new SpellCaster(initialMana, initialRegen, Hittable.Team.PLAYER, initialPower, GameManager.Instance.wave); 
-        spellcaster.SetCasterGameObject(this.gameObject);
-
-        StartCoroutine(spellcaster.ManaRegeneration());
+        
         hp = new Hittable(100, Hittable.Team.PLAYER, gameObject);
         hp.OnDeath += Die;
         hp.team = Hittable.Team.PLAYER;
