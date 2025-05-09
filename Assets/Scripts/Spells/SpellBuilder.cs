@@ -1,5 +1,6 @@
 using UnityEngine;
 <<<<<<< HEAD
+<<<<<<< HEAD
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -95,71 +96,75 @@ public static class SpellBuilder
 =======
 
     public static Spell GenerateRandomSpell(int currentWave, int playerSpellPower)
-    {
-        SpellLibrary lib = Object.FindAnyObjectByType<SpellLibrary>();
-        if (lib == null)
-        {
-            Debug.LogError("SpellLibrary not found. Ensure spells.json is loaded.");
-            return null;
-        }
-        List<SpellData> allSpells = lib.GetAllSpellData();
-        if (allSpells == null || allSpells.Count == 0)
-        {
-            Debug.LogError("No spell data available.");
-            return null;
-        }
+=======
+using System;
+using System.Collections.Generic;
 
-        // Pick a random spell definition
-        SpellData data = allSpells[Random.Range(0, allSpells.Count)];
-        if (IsModifier(data))
-        {
-            // Recursively generate an inner spell until we get a base
-            Spell innerSpell = GenerateRandomSpell(currentWave, playerSpellPower);
-            if (innerSpell == null || IsModifier(data) == false)
-            {
-                innerSpell = BuildBaseSpell(data, currentWave, playerSpellPower);
-            }
-            return BuildModifierSpell(data, innerSpell, currentWave, playerSpellPower);
-        }
-        else
-        {
-            return BuildBaseSpell(data, currentWave, playerSpellPower);
-        }
+public static class SpellBuilder
+{
+    static List<SpellData> defs;
+    public static void Init(string json)
+>>>>>>> 22ff77c (getting there)
+    {
+        defs = JsonUtility.FromJson<SpellDataList>(json).spells;
     }
 
-    private static bool IsModifier(SpellData data)
+    public static Spell BuildRandom(int wave, int power)
     {
-        return string.IsNullOrEmpty(data.mana_cost) && (data.damage == null || string.IsNullOrEmpty(data.damage.amount));
+        if (defs == null || defs.Count == 0)
+        {
+            Debug.LogError("SpellBuilder: No spell definitions loaded.");
+            return null;
+        }
+        var vars = new Dictionary<string, float> { { "wave", wave }, { "power", power } };
+        var d = defs[UnityEngine.Random.Range(0, defs.Count)];
+        if (IsModifier(d))
+        {
+            Spell inner = BuildRandom(wave, power);
+            return BuildMod(d, inner, vars);
+        }
+        return BuildBase(d, vars);
     }
 
-    private static BaseSpell BuildBaseSpell(SpellData data, int wave, int power)
+    static bool IsModifier(SpellData d) => d.damage == null;
+
+    static Spell BuildBase(SpellData d, Dictionary<string, float> v)
     {
-        Dictionary<string, float> vars = new Dictionary<string, float> { { "wave", wave }, { "power", power } };
+        int dmg = RPNEvaluator.EvalInt(d.damage.amount, v);
+        int cost = RPNEvaluator.EvalInt(d.mana_cost, v);
+        float cd = RPNEvaluator.Eval(d.cooldown, v);
+        Damage.Type dt;
+        Enum.TryParse(d.damage.type, true, out dt);
+        int N = string.IsNullOrEmpty(d.N) ? 1 : RPNEvaluator.EvalInt(d.N, v);
 
-        // Evaluate RPN formulas for base stats
-        int baseDamage = 0;
-        string damageType = "physical";
-        if (data.damage != null && !string.IsNullOrEmpty(data.damage.amount))
-        {
-            baseDamage = Mathf.RoundToInt(RPNEvaluator.Evaluate(data.damage.amount, vars));
-            damageType = data.damage.type;
-        }
-        int secondaryDamage = 0;
-        if (!string.IsNullOrEmpty(data.secondary_damage))
-        {
-            secondaryDamage = Mathf.RoundToInt(RPNEvaluator.Evaluate(data.secondary_damage, vars));
-        }
-        int manaCost = 0;
-        if (!string.IsNullOrEmpty(data.mana_cost))
-        {
-            manaCost = Mathf.RoundToInt(RPNEvaluator.Evaluate(data.mana_cost, vars));
-        }
-        float cooldown = 0f;
-        if (!string.IsNullOrEmpty(data.cooldown))
-        {
-            cooldown = RPNEvaluator.Evaluate(data.cooldown, vars);
-        }
+        return new BaseSpell(
+            d.name, d.description, d.icon,
+            dmg,
+            string.IsNullOrEmpty(d.secondary_damage) ? 0 : RPNEvaluator.EvalInt(d.secondary_damage, v),
+            cost, cd, dt,
+            d.projectile.trajectory,
+            RPNEvaluator.Eval(d.projectile.speed, v),
+            string.IsNullOrEmpty(d.projectile.lifetime) ? 0f : float.Parse(d.projectile.lifetime),
+            d.projectile.sprite,
+            N
+        );
+    }
 
+    static Spell BuildMod(SpellData d, Spell inner, Dictionary<string, float> v)
+    {
+        ValueModifier dm = null, mm = null, sm = null;
+        if (!string.IsNullOrEmpty(d.damage_multiplier))
+            dm = new ValueModifier(ModType.Multiplicative, RPNEvaluator.Eval(d.damage_multiplier, v));
+        if (!string.IsNullOrEmpty(d.mana_multiplier))
+            mm = new ValueModifier(ModType.Multiplicative, RPNEvaluator.Eval(d.mana_multiplier, v));
+        if (!string.IsNullOrEmpty(d.speed_multiplier))
+            sm = new ValueModifier(ModType.Multiplicative, RPNEvaluator.Eval(d.speed_multiplier, v));
+
+        bool split = d.name.ToLower().Contains("split");
+        bool dbl = d.name.ToLower().Contains("double");
+        float del = dbl && !string.IsNullOrEmpty(d.delay) ? RPNEvaluator.Eval(d.delay, v) : 0f;
+
+<<<<<<< HEAD
         // Primary projectile properties
         string trajectory = (data.projectile != null) ? data.projectile.trajectory : "straight";
         float speed = (data.projectile != null && !string.IsNullOrEmpty(data.projectile.speed))
@@ -250,5 +255,15 @@ public static class SpellBuilder
                                                   splitter, doubler, delay);
         return modSpell;
 >>>>>>> 1e7a3e8 (some updates)
+=======
+        return new ModifierSpell(
+            d.name, d.description, d.icon,
+            inner, dm, mm, sm,
+            split, dbl, del
+        );
+>>>>>>> 22ff77c (getting there)
     }
 }
+
+[System.Serializable]
+class SpellDataList { public List<SpellData> spells; }

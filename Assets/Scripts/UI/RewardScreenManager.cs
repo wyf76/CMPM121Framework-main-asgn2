@@ -1,10 +1,13 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+<<<<<<< HEAD
 using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+=======
+>>>>>>> 22ff77c (getting there)
 
 public class RewardScreenManager : MonoBehaviour
 {
@@ -26,12 +29,22 @@ public class RewardScreenManager : MonoBehaviour
     public Button acceptSpellButton;
     public Button nextWaveButton;
 
+<<<<<<< HEAD
     private EnemySpawnerController spawner;
     private SpellCaster playerSpellCaster;
     private GameManager.GameState prevState;
     private Coroutine rewardCoroutine;
     private Spell offeredSpell;
     private Dictionary<string, JObject> spellCatalog;
+=======
+    public TMP_Text  rewardNameText;
+    public TMP_Text  rewardStatsText;
+    public Image     rewardIconImage;
+    public Button    takeButton;
+    public Button    skipButton;
+
+    private Spell rewardSpell;
+>>>>>>> 22ff77c (getting there)
 
     void Start()
     {
@@ -40,6 +53,7 @@ public class RewardScreenManager : MonoBehaviour
         if (acceptSpellButton != null) acceptSpellButton.onClick.AddListener(AcceptSpell);
         if (nextWaveButton != null) nextWaveButton.onClick.AddListener(OnNextWaveClicked);
 
+<<<<<<< HEAD
         prevState = GameManager.Instance.state;
 
         // load spells.json
@@ -48,6 +62,24 @@ public class RewardScreenManager : MonoBehaviour
             spellCatalog = JsonConvert.DeserializeObject<Dictionary<string, JObject>>(ta.text);
         else
             Debug.LogError("RewardScreenManager: spells.json not found in Resources!");
+=======
+        takeButton.onClick.AddListener(() =>
+        {
+            // replace the selected spell in the player's build
+            PlayerController pc = GameManager.Instance.player.GetComponent<PlayerController>();
+            pc.ReplaceSpell(rewardSpell);
+            rewardSpell = null;
+            rewardUI.SetActive(false);
+            GameManager.Instance.enemySpawner.NextWave();
+        });
+
+        skipButton.onClick.AddListener(() =>
+        {
+            rewardSpell = null;
+            rewardUI.SetActive(false);
+            GameManager.Instance.enemySpawner.NextWave();
+        });
+>>>>>>> 22ff77c (getting there)
     }
 
     void Update()
@@ -58,8 +90,41 @@ public class RewardScreenManager : MonoBehaviour
         // show reward screen on every WAVEEND (including endless)
         if (state == GameManager.GameState.WAVEEND)
         {
+<<<<<<< HEAD
             if (rewardCoroutine != null) StopCoroutine(rewardCoroutine);
             rewardCoroutine = StartCoroutine(ShowRewardScreen());
+=======
+            rewardUI.SetActive(true);
+
+            int wave     = GameManager.Instance.wave;
+            string level = GameManager.Instance.enemySpawner.selectedLevel?.name ?? "Unknown";
+
+            waveInfoText.text = $"Wave {wave} complete!\nLevel: {level}";
+
+            // generate the reward spell only once
+            if (rewardSpell == null)
+            {
+                int power = GameManager.Instance.player
+                                   .GetComponent<PlayerController>()
+                                   .spellcaster.spell_power;
+                rewardSpell = SpellBuilder.BuildRandom(wave, power);
+
+                rewardNameText.text  = rewardSpell.Name;
+                rewardStatsText.text = 
+                  $"Mana: {rewardSpell.GetManaCost()}  |  " +
+                  $"Damage: {Mathf.RoundToInt(rewardSpell.GetDamage())}  |  " +
+                  $"Cooldown: {rewardSpell.GetCooldown():0.0}s";
+
+                rewardIconImage.sprite = 
+                  GameManager.Instance.spellIconManager.GetIcon(rewardSpell.IconIndex);
+            }
+        }
+        else if (GameManager.Instance.state == GameManager.GameState.GAMEOVER)
+        {
+            rewardUI.SetActive(true);
+            waveInfoText.text            = "Game Over";
+            nextWaveButton.gameObject.SetActive(false);
+>>>>>>> 22ff77c (getting there)
         }
         else
         {

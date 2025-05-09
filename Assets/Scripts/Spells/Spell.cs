@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 <<<<<<< HEAD
 
@@ -47,28 +48,24 @@ public abstract class Spell
 
     protected float lastCastTime = -Mathf.Infinity;
 
-    internal abstract void CastInternal(Vector3 spawnPosition, Vector3 direction, SpellModifierContext context);
+    internal abstract void CastInternal(Vector3 spawnPos, Vector3 direction, SpellModifierContext ctx);
 
-
-    public void Cast(Vector3 spawnPosition, Vector3 direction)
+    public void Cast(Vector3 spawnPos, Vector3 direction)
     {
-        SpellModifierContext context = new SpellModifierContext();
-        CastInternal(spawnPosition, direction, context);
-        PutOnCooldown();
+        if (!IsOffCooldown()) return;
+        SpellModifierContext ctx = new SpellModifierContext();
+        CastInternal(spawnPos, direction, ctx);
+        lastCastTime = Time.time;
     }
 
+    public bool IsOffCooldown() => Time.time >= lastCastTime + GetCooldown();
+
     public abstract int GetManaCost();
-
     public abstract float GetDamage();
-
     public abstract float GetCooldown();
-
     public abstract string GetProjectileType();
-
     public abstract int GetProjectileSprite();
-
     public abstract float GetProjectileSpeed();
-
     public abstract float GetProjectileLifetime();
 
     public bool IsOffCooldown()
@@ -80,5 +77,4 @@ public abstract class Spell
     {
         lastCastTime = Time.time;
     }
->>>>>>> 1e7a3e8 (some updates)
 }

@@ -1,41 +1,17 @@
-using System;
+using System.Collections.Generic;
 
+public enum ModType { Additive, Multiplicative }
 public class ValueModifier
 {
-    public enum ModType { Additive, Multiplicative }
-    public ModType Type;
-    public float Value;
+    public ModType type; public float value;
+    public ValueModifier(ModType t,float v){type=t;value=v;}
 
-    public ValueModifier(ModType type, float value)
+    public static float Apply(List<ValueModifier> mods,float baseVal)
     {
-        this.Type = type;
-        this.Value = value;
-    }
-
-    public float Apply(float currentValue)
-    {
-        return (Type == ModType.Multiplicative) ? currentValue * Value 
-                                               : currentValue + Value;
-    }
-
-
-    public static float ApplyModifiers(System.Collections.Generic.List<ValueModifier> modifiers, float baseValue)
-    {
-        float result = baseValue;
-        if (modifiers == null) return result;
-        float additiveTotal = 0f;
-        foreach (ValueModifier mod in modifiers)
-        {
-            if (mod.Type == ModType.Multiplicative)
-            {
-                result *= mod.Value;
-            }
-            else if (mod.Type == ModType.Additive)
-            {
-                additiveTotal += mod.Value;
-            }
-        }
-        result += additiveTotal;
-        return result;
+        float result=baseVal; float add=0;
+        foreach(var m in mods)
+            if(m.type==ModType.Multiplicative) result*=m.value;
+            else add+=m.value;
+        return result+add;
     }
 }

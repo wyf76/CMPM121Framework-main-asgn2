@@ -6,6 +6,7 @@ using UnityEngine;
 
 public static class RPNEvaluator
 {
+<<<<<<< HEAD
     public static int Evaluate(string expression, Dictionary<string,int> variables)
     {
         if (string.IsNullOrWhiteSpace(expression))
@@ -100,4 +101,25 @@ public static class RPNEvaluator
             return fallback;
         }
     }
+=======
+    public static float Eval(string expr, Dictionary<string,float> vars)
+    {
+        var st=new Stack<float>();
+        foreach(var tok in expr.Split(' '))
+        {
+            if(vars!=null && vars.ContainsKey(tok)) st.Push(vars[tok]);
+            else if(float.TryParse(tok,out var num)) st.Push(num);
+            else switch(tok){
+                case "+":{float b=st.Pop(),a=st.Pop(); st.Push(a+b);break;}
+                case "-":{float d=st.Pop(),c=st.Pop(); st.Push(c-d);break;}
+                case "*":{float f=st.Pop(),e=st.Pop(); st.Push(e*f);break;}
+                case "/":{float h=st.Pop(),g=st.Pop(); st.Push(g/h);break;}
+                default: throw new Exception($"Bad token '{tok}'");
+            }
+        }
+        return st.Pop();
+    }
+
+    public static int EvalInt(string s, Dictionary<string,float> v) => Mathf.RoundToInt(Eval(s,v));
+>>>>>>> 22ff77c (getting there)
 }

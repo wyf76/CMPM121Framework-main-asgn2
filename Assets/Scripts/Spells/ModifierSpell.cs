@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,9 +10,16 @@ using System;
 using Object = UnityEngine.Object;
 using Random = UnityEngine.Random;
 >>>>>>> 1e7a3e8 (some updates)
+=======
+/// ModifierSpell.cs
+using UnityEngine;
+using System;
+using UnityEngine;
+>>>>>>> 22ff77c (getting there)
 
 public abstract class ModifierSpell : Spell
 {
+<<<<<<< HEAD
 <<<<<<< HEAD
     protected readonly Spell inner;
 
@@ -52,153 +60,85 @@ public abstract class ModifierSpell : Spell
     protected abstract void InjectMods(StatBlock mods);
 =======
     private Spell innerSpell;  // the spell being modified
+=======
+    protected Spell inner;  // so derived spells can access the inner spell
+    private ValueModifier dmgMod, manaMod, spdMod;
+    private bool isSplit, isDouble;
+    private float delay;
+>>>>>>> 22ff77c (getting there)
 
-    // Modifiers for properties 
-    private ValueModifier damageMod;
-    private ValueModifier manaMod;
-    private ValueModifier speedMod;
-    private SpellData.ProjectileData projectileOverrideInfo;  
-
-    // Special behavior flags
-    private bool isSplitter;
-    private bool isDoubler;
-    private float delay;  // delay for doubler second cast
-
-    public ModifierSpell(string name, string description, int iconIndex,
-                         Spell innerSpell,
-                         ValueModifier damageMod, ValueModifier manaMod, ValueModifier speedMod,
-                         SpellData.ProjectileData projectileOverrideInfo,
-                         bool isSplitter = false, bool isDoubler = false, float delay = 0f)
+    public ModifierSpell(string n, string d, int ico,
+                         Spell sp,
+                         ValueModifier dm, ValueModifier mm, ValueModifier sm,
+                         bool split = false, bool dbl = false, float del = 0f)
     {
-        this.Name = name;
-        this.Description = description;
-        this.IconIndex = iconIndex;
-        this.innerSpell = innerSpell;
-        this.damageMod = damageMod;
-        this.manaMod = manaMod;
-        this.speedMod = speedMod;
-        this.projectileOverrideInfo = projectileOverrideInfo;
-        this.isSplitter = isSplitter;
-        this.isDoubler = isDoubler;
-        this.delay = delay;
+        Name = n; Description = d; IconIndex = ico;
+        inner = sp; dmgMod = dm; manaMod = mm; spdMod = sm;
+        isSplit = split; isDouble = dbl; delay = del;
     }
 
-    internal override void CastInternal(Vector3 spawnPosition, Vector3 direction, SpellModifierContext context)
+    internal override void CastInternal(Vector3 p, Vector3 dir, SpellModifierContext ctx)
     {
-        if (damageMod != null)
-            context.damageModifiers.Add(damageMod);
-        if (manaMod != null)
-            context.manaModifiers.Add(manaMod);
-        if (speedMod != null)
-            context.speedModifiers.Add(speedMod);
-        if (projectileOverrideInfo != null && context.projectileOverride == null)
-        {
-            context.projectileOverride = projectileOverrideInfo;
-        }
+        if (dmgMod != null) ctx.damageMods.Add(dmgMod);
+        if (manaMod != null) ctx.manaMods.Add(manaMod);
+        if (spdMod != null) ctx.speedMods.Add(spdMod);
 
-        // Handle special casting behaviors
-        if (isSplitter)
+        if (isSplit)
         {
-            float angleVariance = 5f;
-            float randAngle = Random.Range(-angleVariance, angleVariance);
-            Quaternion rot1 = Quaternion.Euler(0, 0, randAngle);
-            Quaternion rot2 = Quaternion.Euler(0, 0, -randAngle);
-            SpellModifierContext ctx1 = context.Clone();
-            SpellModifierContext ctx2 = context.Clone();
-            innerSpell.CastInternal(spawnPosition, rot1 * direction, ctx1);
-            innerSpell.CastInternal(spawnPosition, rot2 * direction, ctx2);
+            float v = 5f; float a = UnityEngine.Random.Range(-v, v);
+            inner.CastInternal(p, Quaternion.Euler(0, 0, a) * dir, ctx);
+            inner.CastInternal(p, Quaternion.Euler(0, 0, -a) * dir, ctx);
         }
-        else if (isDoubler)
+        else if (isDouble)
         {
-            SpellModifierContext ctxInitial = context.Clone();
-            innerSpell.CastInternal(spawnPosition, direction, ctxInitial);
+            inner.CastInternal(p, dir, ctx);
             if (delay <= 0f) delay = 0.2f;
-            CoroutineManager cm = Object.FindAnyObjectByType<CoroutineManager>();
-            if (cm != null)
-            {
-                // Start a coroutine to execute the second cast after the delay
-                cm.StartCoroutine(ExecuteAfterDelay(delay, () =>
-                {
-                    SpellModifierContext ctxDelayed = context.Clone();
-                    innerSpell.CastInternal(spawnPosition, direction, ctxDelayed);
-                }));
-            }
-            else
-            {
-                Debug.LogWarning("CoroutineManager not found, second cast will not be delayed.");
-            }
+            ProjectileManager.Instance.StartCoroutine(Delayed(delay, () => inner.CastInternal(p, dir, ctx)));
         }
         else
         {
-            innerSpell.CastInternal(spawnPosition, direction, context);
+            inner.CastInternal(p, dir, ctx);
         }
     }
 
-    // Coroutine helper for delayed execution of an action
-    private System.Collections.IEnumerator ExecuteAfterDelay(float seconds, Action action)
+    private System.Collections.IEnumerator Delayed(float t, Action a)
     {
-        yield return new WaitForSeconds(seconds);
-        action.Invoke();
+        yield return new WaitForSeconds(t);
+        a();
     }
 
     public override int GetManaCost()
     {
-        int cost = innerSpell.GetManaCost();
+        int cost = inner.GetManaCost();
         if (manaMod != null)
         {
-            // Apply multiplicative or additive mana cost change
-            if (manaMod.Type == ValueModifier.ModType.Multiplicative)
-                cost = Mathf.RoundToInt(cost * manaMod.Value);
-            else if (manaMod.Type == ValueModifier.ModType.Additive)
-                cost += Mathf.RoundToInt(manaMod.Value);
+            cost = manaMod.type == ModType.Multiplicative ? Mathf.RoundToInt(cost * manaMod.value) : cost + Mathf.RoundToInt(manaMod.value);
         }
         return cost;
     }
 
     public override float GetDamage()
     {
-        float dmg = innerSpell.GetDamage();
-        if (damageMod != null)
+        float dmg = inner.GetDamage();
+        if (dmgMod != null)
         {
-            if (damageMod.Type == ValueModifier.ModType.Multiplicative)
-                dmg *= damageMod.Value;
-            else if (damageMod.Type == ValueModifier.ModType.Additive)
-                dmg += damageMod.Value;
+            dmg = dmgMod.type == ModType.Multiplicative ? dmg * dmgMod.value : dmg + dmgMod.value;
         }
-        // If this modifier causes multiple casts, include their contribution in estimated damage
-        if (isSplitter) dmg *= 2;
-        if (isDoubler)  dmg *= 2;
+        if (isSplit) dmg *= 2f;
+        if (isDouble) dmg *= 2f;
         return dmg;
     }
 
-    public override float GetCooldown()
-    {
-        return innerSpell.GetCooldown();
-    }
-
-    public override string GetProjectileType()
-    {
-        if (projectileOverrideInfo != null && !string.IsNullOrEmpty(projectileOverrideInfo.trajectory))
-            return projectileOverrideInfo.trajectory;
-        return innerSpell.GetProjectileType();
-    }
-
-    public override int GetProjectileSprite()
-    {
-        if (projectileOverrideInfo != null && projectileOverrideInfo.sprite != 0)
-            return projectileOverrideInfo.sprite;
-        return innerSpell.GetProjectileSprite();
-    }
-
+    public override float GetCooldown() => inner.GetCooldown();
+    public override string GetProjectileType() => inner.GetProjectileType();
+    public override int GetProjectileSprite() => inner.GetProjectileSprite();
     public override float GetProjectileSpeed()
     {
-        if (projectileOverrideInfo != null && !string.IsNullOrEmpty(projectileOverrideInfo.speed))
-            return float.Parse(projectileOverrideInfo.speed);
-        float baseSpeed = innerSpell.GetProjectileSpeed();
-        if (speedMod != null && speedMod.Type == ValueModifier.ModType.Multiplicative)
-            baseSpeed *= speedMod.Value;
-        return baseSpeed;
+        float sp = inner.GetProjectileSpeed();
+        if (spdMod != null) sp = spdMod.type == ModType.Multiplicative ? sp * spdMod.value : sp + spdMod.value;
+        return sp;
     }
+<<<<<<< HEAD
 
     public override float GetProjectileLifetime()
     {
@@ -208,3 +148,7 @@ public abstract class ModifierSpell : Spell
     }
 >>>>>>> 1e7a3e8 (some updates)
 }
+=======
+    public override float GetProjectileLifetime() => inner.GetProjectileLifetime();
+}
+>>>>>>> 22ff77c (getting there)
