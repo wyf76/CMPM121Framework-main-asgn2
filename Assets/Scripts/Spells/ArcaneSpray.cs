@@ -41,7 +41,7 @@ public sealed class ArcaneSpray : Spell
     private float GetCurrentWave()
     {
         var spawner = Object.FindFirstObjectByType<EnemySpawnerController>();
-        return spawner != null ? spawner.CurrentWave : 1f;
+        return spawner != null ? spawner.currentWave : 1f;
     }
 
     public override void LoadAttributes(JObject json, Dictionary<string, float> initialVars)

@@ -21,43 +21,35 @@ public class EnemyController : MonoBehaviour
     private float lastAttackTime;
     private bool dead;
 
-    private void Start()
+    void Start()
     {
         playerTransform = GameManager.Instance.player.transform;
-        currentSpeed = speed;
-
-        // Subscribe to death and health change
         hp.OnDeath += Die;
-        hp.OnHealthChanged += (_, __) => healthui.SetHealth(hp);
         healthui.SetHealth(hp);
     }
 
-    private void Update()
+    void Update()
     {
-        if (dead) return;
-
         Vector3 direction = playerTransform.position - transform.position;
         if (direction.magnitude < 2f)
         {
-            TryAttack();
+            DoAttack();
         }
         else
         {
-            // Move towards player
-            GetComponent<Unit>().movement = direction.normalized * currentSpeed;
+            GetComponent<Unit>().movement = direction.normalized * speed;
+        }
+    }
+    
+    void DoAttack()
+    {
+        if (lastAttackTime + 2 < Time.time)
+        {
+            lastAttackTime = Time.time;
+            playerTransform.gameObject.GetComponent<PlayerController>().hp.Damage(new Damage(5, Damage.Type.PHYSICAL));
         }
     }
 
-    private void TryAttack()
-    {
-        if (Time.time >= lastAttackTime + attackCooldown)
-        {
-            lastAttackTime = Time.time;
-            // Damage player
-            var playerHp = playerTransform.GetComponent<PlayerController>().hp;
-            playerHp.Damage(new Damage(damage, Damage.Type.PHYSICAL));
-        }
-    }
 
     // <param name="duration">Duration of slow in seconds.</param>
     // <param name="slowFactor">Multiplier to speed (0 to 1).</param>
@@ -75,11 +67,13 @@ public class EnemyController : MonoBehaviour
         currentSpeed = speed;
     }
 
-    private void Die()
+    void Die()
     {
-        if (dead) return;
-        dead = true;
-        GameManager.Instance.RemoveEnemy(gameObject);
-        Destroy(gameObject);
+        if (!dead)
+        {
+            dead = true;
+            GameManager.Instance.RemoveEnemy(gameObject);
+            Destroy(gameObject);
+        }
     }
 }

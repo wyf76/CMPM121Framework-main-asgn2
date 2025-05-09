@@ -34,7 +34,7 @@ public sealed class MagicMissile : Spell
     private float GetWave()
     {
         var sp=Object.FindFirstObjectByType<EnemySpawnerController>();
-        return sp? sp.CurrentWave:1f;
+        return sp? sp.currentWave:1f;
     }
 
     public override void LoadAttributes(JObject json, Dictionary<string, float> vars)

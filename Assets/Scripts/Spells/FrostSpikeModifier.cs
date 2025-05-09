@@ -39,29 +39,35 @@ public sealed class FrostSpikeModifier : ModifierSpell
 
     protected override IEnumerator ApplyModifierEffect(Vector3 origin, Vector3 target)
     {
-        // Record existing projectiles
+        // 1) Record all existing projectiles
         var before = Object.FindObjectsByType<ProjectileController>(FindObjectsSortMode.None);
 
-        // Cast the inner spell
+        // 2) Cast the inner spell
         yield return inner.TryCast(origin, target);
 
-        // Find new projectiles and attach pierce/slow behavior
+        // 3) Find the new projectiles
         var after = Object.FindObjectsByType<ProjectileController>(FindObjectsSortMode.None);
         foreach (var proj in after)
         {
             if (System.Array.IndexOf(before, proj) < 0)
             {
-                // Configure the new projectile
-                proj.PierceCount = _pierceCount;
+                // make it pierce indefinitely
+                proj.piercing = true;
+
+                // wire up the slow-on-hit
                 proj.OnHit += (hit, pos) =>
                 {
-                    if (hit.team != owner.team)
+
+                    // now apply the frost slow
+                    var ec = hit.owner.GetComponent<EnemyController>();
+                    if (ec != null)
                     {
-                        hit.owner.GetComponent<EnemyController>()
-                           ?.ApplySlow(_slowDuration, _slowFactor);
+                        ec.ApplySlow(_slowDuration, _slowFactor);
                     }
                 };
             }
         }
     }
+
+
 }

@@ -4,21 +4,10 @@ using System.Collections;
 
 public class ProjectileController : MonoBehaviour
 {
-    [Header("Lifetime")]
-    [Tooltip("Time in seconds before this projectile auto-destroys.")]
     public float lifetime;
-
-    [Header("Piercing")]
-    [Tooltip("Number of times this projectile can hit before being destroyed.")]
-    public int PierceCount = 0;
-
-    [Tooltip("Allows infinite piercing when true.")]
-    public bool infinitePiercing = false;
-
-    [Header("Movement")]
-    [Tooltip("Movement logic for this projectile.")]
-    public ProjectileMovement movement;
     public event Action<Hittable, Vector3> OnHit;
+    public ProjectileMovement movement;
+    public bool piercing = false; // <-- Add piercing flag
 
     void Start()
     {
@@ -51,34 +40,27 @@ public class ProjectileController : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // Ignore collisions with other projectiles
-        if (collision.gameObject.CompareTag("projectile"))
-            return;
+        if (collision.gameObject.CompareTag("projectile")) return;
 
-        // Handle hitting units
         if (collision.gameObject.CompareTag("unit"))
         {
-            var hittable = collision.gameObject.GetComponent<Hittable>()
-                           ?? collision.gameObject.GetComponent<PlayerController>()?.hp;
-            if (hittable != null)
-                OnHit?.Invoke(hittable, transform.position);
+            var ec = collision.gameObject.GetComponent<EnemyController>();
+            if (ec != null && OnHit != null)
+            {
+                OnHit.Invoke(ec.hp, transform.position);
+            }
+            else
+            {
+                var pc = collision.gameObject.GetComponent<PlayerController>();
+                if (pc != null && OnHit != null)
+                {
+                    OnHit.Invoke(pc.hp, transform.position);
+                }
+            }
         }
 
-        // Determine whether to destroy based on piercing settings
-        if (infinitePiercing)
-        {
-            // never destroy
-            return;
-        }
-
-        if (PierceCount > 0)
-        {
-            PierceCount--;
-            return;
-        }
-
-        // No piercing left — destroy
-        Destroy(gameObject);
+        if (!piercing) // <-- Only destroy if not piercing
+            Destroy(gameObject);
     }
 
     public void SetLifetime(float newLifetime)

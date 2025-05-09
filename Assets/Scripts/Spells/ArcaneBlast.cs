@@ -51,7 +51,7 @@ public sealed class ArcaneBlast : Spell
     private float GetCurrentWave()
     {
         var spawner = Object.FindFirstObjectByType<EnemySpawnerController>();
-        return spawner != null ? spawner.CurrentWave : 1f;
+        return spawner != null ? spawner.currentWave : 1f;
     }
 
     // Load JSON attributes into fields

@@ -50,7 +50,7 @@ public static class SpellBuilder
         return s;
     }
 
-    private Spell BuildBase(SpellCaster owner, string key, Dictionary<string,float> vars)
+    public Spell BuildBase(SpellCaster owner, string key, Dictionary<string,float> vars)
     {
         Spell s = key switch
         {
@@ -69,7 +69,7 @@ public static class SpellBuilder
     }
 
 
-    private Spell ApplyModifier(Spell inner, string mkey, Dictionary<string,float> vars)
+    public Spell ApplyModifier(Spell inner, string mkey, Dictionary<string,float> vars)
     {
         Spell mod = mkey switch
         {
@@ -92,6 +92,7 @@ public static class SpellBuilder
     private int GetCurrentWave()
     {
         var sp = UnityEngine.Object.FindFirstObjectByType<EnemySpawnerController>();
+<<<<<<< HEAD
         return sp != null ? sp.CurrentWave : 1;
 =======
 
@@ -262,6 +263,9 @@ public static class SpellBuilder
             split, dbl, del
         );
 >>>>>>> 22ff77c (getting there)
+=======
+        return sp != null ? sp.currentWave : 1;
+>>>>>>> a68f03a (fixing bugs)
     }
 }
 

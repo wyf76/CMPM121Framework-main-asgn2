@@ -5,24 +5,27 @@ using Newtonsoft.Json.Linq;
 
 public sealed class VampiricEssenceModifier : ModifierSpell
 {
-    private float _lifeStealPercent = 0.2f;
-    private string _suffix = "vampiric";
+    private float  _lifeStealPercent = 0.2f;
+    private string _modifierName    = "vampiric";        // default suffix
 
     public VampiricEssenceModifier(Spell inner) : base(inner) { }
 
-    protected override string Suffix => _suffix;
+    protected override string Suffix => _modifierName;   // what ShowReward prints
 
     public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
     {
-        base.LoadAttributes(json, vars);
-        _suffix = json["name"]?.Value<string>() ?? _suffix;
+        // 1) pull the pretty display name from JSON
+        _modifierName = json["name"]?.Value<string>() ?? _modifierName;
 
-        var eff = json["effects"]?[0];
-        if (eff != null && eff["type"].Value<string>() == "lifesteal")
-            _lifeStealPercent = float.Parse(eff["percent"].Value<string>());
+        // 2) parse your lifesteal fields
+        var eff = json["effects"]![0];
+        if (eff["type"]!.Value<string>() == "lifesteal")
+            _lifeStealPercent = float.Parse(eff["percent"]!.Value<string>());
+
+        base.LoadAttributes(json, vars);
     }
 
-    // No base stats are modified by vampiric essence
+    // You still need a no‐op InjectMods override
     protected override void InjectMods(StatBlock mods) { }
 
     protected override IEnumerator ApplyModifierEffect(Vector3 origin, Vector3 target)

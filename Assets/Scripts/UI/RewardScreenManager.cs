@@ -144,13 +144,13 @@ public class RewardScreenManager : MonoBehaviour
 
         // Note: CurrentWave is the upcoming wave, so subtract 1 for “current”
         if (currentWaveText != null)
-            currentWaveText.text = $"Current Wave: {spawner.CurrentWave - 1}";
+            currentWaveText.text = $"Current Wave: {spawner.currentWave - 1}";
 
         if (nextWaveText != null)
-            nextWaveText.text = $"Next Wave: {spawner.CurrentWave}";
+            nextWaveText.text = $"Next Wave: {spawner.currentWave}";
 
         if (enemiesKilledText != null)
-            enemiesKilledText.text = $"Enemies Killed: {spawner.LastWaveEnemyCount}";
+            enemiesKilledText.text = $"Enemies Killed: {spawner.lastWaveEnemyCount}";
 
         GenerateSpellReward();
 

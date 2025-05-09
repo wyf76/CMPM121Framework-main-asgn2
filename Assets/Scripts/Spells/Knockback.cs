@@ -32,28 +32,53 @@ public sealed class KnockbackSpell : Spell
     private Dictionary<string,float> GetVars() => new Dictionary<string,float>
     {
         ["power"] = owner.spellPower,
-        ["wave"]  = Object.FindFirstObjectByType<EnemySpawnerController>()?.CurrentWave ?? 1
+        ["wave"]  = Object.FindFirstObjectByType<EnemySpawnerController>()?.currentWave ?? 1
     };
 
     public override void LoadAttributes(JObject json, Dictionary<string,float> vars)
     {
-        _displayName      = json["name"].Value<string>();
-        _iconIndex        = json["icon"].Value<int>();
-        _damageExpr       = json["damage"]["amount"].Value<string>();
-        _baseManaCost     = RPNEvaluator.SafeEvaluateFloat(json["mana_cost"].Value<string>(), vars, 12f);
-        _baseCooldown     = RPNEvaluator.SafeEvaluateFloat(json["cooldown"].Value<string>(), vars, 1.2f);
-        _trajectory       = json["projectile"]["trajectory"].Value<string>();
-        _speedExpr        = json["projectile"]["speed"].Value<string>();
-        _projectileSprite = json["projectile"]["sprite"].Value<int>();
-        _forceExpr        = json["effects"][0]["force"].Value<string>();
+        //— all your other field assignments up above
+        _displayName      = json["name"]?.Value<string>()       ?? _displayName;
+        _iconIndex        = json["icon"]?.Value<int>()          ?? _iconIndex;
+        _damageExpr       = json["damage"]?["amount"]?.Value<string>() ?? _damageExpr;
+        _baseManaCost     = RPNEvaluator.SafeEvaluateFloat(json["mana_cost"]?.Value<string>(),
+                                                        vars,
+                                                        _baseManaCost);
+        _baseCooldown     = RPNEvaluator.SafeEvaluateFloat(json["cooldown"]?.Value<string>(),
+                                                        vars,
+                                                        _baseCooldown);
+        _trajectory       = json["projectile"]?["trajectory"]?.Value<string>() ?? _trajectory;
+        _speedExpr        = json["projectile"]?["speed"]?.Value<string>()      ?? _speedExpr;
+        _projectileSprite = json["projectile"]?["sprite"]?.Value<int>()        ?? _projectileSprite;
+
+        // —— NOW the safe, guarded effects read: ——
+        var effects = json["effects"] as JArray;
+        if (effects != null && effects.Count > 0)
+        {
+            // find the first “knockback” effect
+            foreach (var e in effects)
+            {
+                if (e["type"]?.Value<string>() == "knockback")
+                {
+                    _forceExpr = e["force"]?.Value<string>() ?? _forceExpr;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[KnockbackSpell] no effects[] array found in JSON for '{_displayName}', defaulting force to '{_forceExpr}'");
+        }
     }
 
     protected override IEnumerator Cast(Vector3 origin, Vector3 target)
     {
         float dmg   = Damage;
         float spd   = Speed;
-        float force = RPNEvaluator.SafeEvaluateFloat(_forceExpr, GetVars(), 5f);
-
+        float force = 5f;
+        if (!string.IsNullOrWhiteSpace(_forceExpr))
+            force = RPNEvaluator.SafeEvaluateFloat(_forceExpr, GetVars(), force);
+        
         GameManager.Instance.projectileManager.CreateProjectile(
             _projectileSprite,
             _trajectory,
@@ -66,6 +91,8 @@ public sealed class KnockbackSpell : Spell
                 {
                     // Damage
                     hit.Damage(new global::Damage(Mathf.RoundToInt(dmg), global::Damage.Type.PHYSICAL));
+                    
+                    Debug.Log($"[Knockback] Impulse={force:F1} on {hit.owner.name}");
 
                     // Knockback
                     var rb = hit.owner.GetComponent<Rigidbody2D>();

@@ -47,7 +47,7 @@ public sealed class ArcaneBolt : Spell
     private float GetCurrentWave()
     {
         var spawner = UnityEngine.Object.FindFirstObjectByType<EnemySpawnerController>();
-        return spawner != null ? spawner.CurrentWave : 1f;
+        return spawner != null ? spawner.currentWave : 1f;
     }
 
     // Load JSON attributes
