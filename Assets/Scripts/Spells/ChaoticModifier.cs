@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 public sealed class ChaoticModifier : ModifierSpell
 {
-    // Modifier settings
+    // damage multiplier
     private float _damageMultiplier = 1.5f;
     private string _suffix = "chaotic";
 
@@ -13,59 +13,44 @@ public sealed class ChaoticModifier : ModifierSpell
 
     protected override string Suffix => _suffix;
 
-    public override void LoadAttributes(JObject json, Dictionary<string, float> initialVars)
+    public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
     {
-        Debug.Log("[ChaoticModifier] Loading attributes");
+        if (json.TryGetValue("name", out var nameToken))
+            _suffix = nameToken.Value<string>();
 
-        // Load custom name if provided
-        _suffix = json["name"]?.Value<string>() ?? _suffix;
+        if (json.TryGetValue("damage_multiplier", out var dm))
+            _damageMultiplier = RPNEvaluator.SafeEvaluateFloat(dm.Value<string>(), vars, _damageMultiplier);
 
-        // Load multiplier expression
-        if (json["damage_multiplier"] != null)
-        {
-            string expr = json["damage_multiplier"].Value<string>();
-            _damageMultiplier = RPNEvaluator.SafeEvaluateFloat(expr, initialVars, _damageMultiplier);
-            Debug.Log($"[ChaoticModifier] multiplier={_damageMultiplier}");
-        }
-
-        // Base modifier loading
-        base.LoadAttributes(json, initialVars);
+        base.LoadAttributes(json, vars);
     }
 
-    // Inject multiplication on damage
+    // apply damage multiplier
     protected override void InjectMods(StatBlock mods)
     {
-        Debug.Log($"[ChaoticModifier] Injecting damage × {_damageMultiplier}");
         mods.DamageMods.Add(new ValueMod(ModOp.Mul, _damageMultiplier));
     }
 
-    // Apply spiraling effect after base cast
     protected override IEnumerator ApplyModifierEffect(Vector3 origin, Vector3 target)
     {
-        Debug.Log("[ChaoticModifier] Applying spiraling effect");
-
-        // Handle specific inner spell types
         if (inner is ArcaneSpray)
-            yield return CreateSpiralingSpray(origin, target);
+            yield return SpraySpiral(origin, target);
         else if (inner is ArcaneBlast)
-            yield return CreateSpiralingBlast(origin, target);
+            yield return BlastSpiral(origin, target);
         else
-            yield return CreateGenericSpiraling(origin, target);
+            yield return GenericSpiral(origin, target);
     }
 
-    // Spiraling spray implementation
-    private IEnumerator CreateSpiralingSpray(Vector3 origin, Vector3 target)
+    private IEnumerator SpraySpiral(Vector3 origin, Vector3 target)
     {
-        float baseAngle = Mathf.Atan2((target - origin).y, (target - origin).x) * Mathf.Rad2Deg;
-        int count = Mathf.RoundToInt(inner.Damage) + 5;
-        float angleStep = 60f / (count - 1);
-        float startAngle = baseAngle - 30f;
+        float baseAngle = Mathf.Atan2(target.y - origin.y, target.x - origin.x) * Mathf.Rad2Deg;
+        int count = Mathf.RoundToInt(Damage) + 5;
+        float step = 60f / (count - 1);
+        float start = baseAngle - 30f;
 
         for (int i = 0; i < count; i++)
         {
-            float angleDeg = startAngle + i * angleStep;
-            Vector3 dir = new Vector3(Mathf.Cos(angleDeg * Mathf.Deg2Rad), Mathf.Sin(angleDeg * Mathf.Deg2Rad), 0f);
-
+            float angle = start + step * i;
+            Vector3 dir = new Vector3(Mathf.Cos(angle * Mathf.Deg2Rad), Mathf.Sin(angle * Mathf.Deg2Rad));
             GameManager.Instance.projectileManager.CreateProjectile(
                 inner.IconIndex,
                 "spiraling",
@@ -75,19 +60,15 @@ public sealed class ChaoticModifier : ModifierSpell
                 (hit, _) =>
                 {
                     if (hit.team != owner.team)
-                    {
-                        int amt = Mathf.RoundToInt(Damage);
-                        hit.Damage(new global::Damage(amt, global::Damage.Type.ARCANE));
-                    }
+                        hit.Damage(new global::Damage(Mathf.RoundToInt(Damage), global::Damage.Type.ARCANE));
                 },
-                0.1f + inner.Speed / 40f);
-
+                0.1f + inner.Speed / 40f
+            );
             yield return new WaitForSeconds(0.02f);
         }
     }
 
-    // Spiraling blast implementation
-    private IEnumerator CreateSpiralingBlast(Vector3 origin, Vector3 target)
+    private IEnumerator BlastSpiral(Vector3 origin, Vector3 target)
     {
         Vector3 dir = (target - origin).normalized;
         GameManager.Instance.projectileManager.CreateProjectile(
@@ -96,30 +77,27 @@ public sealed class ChaoticModifier : ModifierSpell
             origin,
             dir,
             inner.Speed,
-            (hit, impact) =>
+            (hit, pos) =>
             {
                 if (hit.team != owner.team)
                 {
-                    int amt = Mathf.RoundToInt(Damage);
-                    hit.Damage(new global::Damage(amt, global::Damage.Type.ARCANE));
-                    CreateSpiralingSecondaryExplosion(impact, amt / 4);
+                    int dmg = Mathf.RoundToInt(Damage);
+                    hit.Damage(new global::Damage(dmg, global::Damage.Type.ARCANE));
+                    SecondaryExplosion(pos, dmg / 4);
                 }
             });
-
         yield return null;
     }
 
-    // Helper for secondary spiraling explosion
-    private void CreateSpiralingSecondaryExplosion(Vector3 center, int damage)
+    private void SecondaryExplosion(Vector3 center, int damage)
     {
         int count = 8;
-        float angleStep = 360f / count;
+        float step = 360f / count;
 
         for (int i = 0; i < count; i++)
         {
-            float angleDeg = i * angleStep;
-            Vector3 dir = new Vector3(Mathf.Cos(angleDeg * Mathf.Deg2Rad), Mathf.Sin(angleDeg * Mathf.Deg2Rad), 0f);
-
+            float rad = i * step * Mathf.Deg2Rad;
+            Vector3 dir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad));
             GameManager.Instance.projectileManager.CreateProjectile(
                 inner.IconIndex,
                 "spiraling",
@@ -131,12 +109,12 @@ public sealed class ChaoticModifier : ModifierSpell
                     if (hit.team != owner.team)
                         hit.Damage(new global::Damage(damage, global::Damage.Type.ARCANE));
                 },
-                0.3f);
+                0.3f
+            );
         }
     }
 
-    // Generic spiraling for other spells
-    private IEnumerator CreateGenericSpiraling(Vector3 origin, Vector3 target)
+    private IEnumerator GenericSpiral(Vector3 origin, Vector3 target)
     {
         GameManager.Instance.projectileManager.CreateProjectile(
             inner.IconIndex,
@@ -147,12 +125,8 @@ public sealed class ChaoticModifier : ModifierSpell
             (hit, _) =>
             {
                 if (hit.team != owner.team)
-                {
-                    int amt = Mathf.RoundToInt(Damage);
-                    hit.Damage(new global::Damage(amt, global::Damage.Type.ARCANE));
-                }
+                    hit.Damage(new global::Damage(Mathf.RoundToInt(Damage), global::Damage.Type.ARCANE));
             });
-
         yield return null;
     }
 }

@@ -3,59 +3,68 @@ using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
+
+// Modifier that casts the underlying spell twice with a configurable delay,
+// increasing mana cost and cooldown duration accordingly.
+
 public sealed class Doubler : ModifierSpell
 {
     private float _delay;
     private float _manaMultiplier;
-    private float _cdMultiplier;
+    private float _cooldownMultiplier;
     private string _suffix;
 
     public Doubler(Spell inner) : base(inner)
     {
-        _delay           = 0.5f;
-        _manaMultiplier  = 1.5f;
-        _cdMultiplier    = 1.5f;
-        _suffix          = "doubled";
+        // Default values
+        _delay               = 0.5f;
+        _manaMultiplier      = 1.5f;
+        _cooldownMultiplier  = 1.5f;
+        _suffix              = "doubled";
     }
 
     protected override string Suffix => _suffix;
 
+    // Loads custom values from JSON, overriding defaults if present.
+
     public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
     {
-        _suffix = json["name"]?.Value<string>() ?? _suffix;
-
-        if (json["delay"] != null)
-            _delay = RPNEvaluator.SafeEvaluateFloat(json["delay"].Value<string>(), vars, _delay);
-
-        if (json["mana_multiplier"] != null)
-            _manaMultiplier = RPNEvaluator.SafeEvaluateFloat(json["mana_multiplier"].Value<string>(), vars, _manaMultiplier);
-
-        if (json["cooldown_multiplier"] != null)
-            _cdMultiplier = RPNEvaluator.SafeEvaluateFloat(json["cooldown_multiplier"].Value<string>(), vars, _cdMultiplier);
+        _suffix = json.Value<string>("name") ?? _suffix;
+        if (json.TryGetValue("delay", out var d))
+            _delay = RPNEvaluator.SafeEvaluateFloat(d.Value<string>(), vars, _delay);
+        if (json.TryGetValue("mana_multiplier", out var mm))
+            _manaMultiplier = RPNEvaluator.SafeEvaluateFloat(mm.Value<string>(), vars, _manaMultiplier);
+        if (json.TryGetValue("cooldown_multiplier", out var cm))
+            _cooldownMultiplier = RPNEvaluator.SafeEvaluateFloat(cm.Value<string>(), vars, _cooldownMultiplier);
 
         base.LoadAttributes(json, vars);
     }
 
-    protected override void InjectMods(StatBlock mods)
+    // Applies the mana and cooldown multipliers to the spell's stats.
+    protected override void InjectMods(StatBlock stats)
     {
-        mods.ManaMods.Add(new ValueMod(ModOp.Mul, _manaMultiplier));
-        mods.CooldownMods.Add(new ValueMod(ModOp.Mul, _cdMultiplier));
+        stats.ManaMods.Add(new ValueMod(ModOp.Mul,     _manaMultiplier));
+        stats.CooldownMods.Add(new ValueMod(ModOp.Mul, _cooldownMultiplier));
     }
 
-    protected override IEnumerator Cast(Vector3 origin, Vector3 target)
+
+    // Casts the inner spell twice: immediately and again after the delay.
+    // Recomputes start/end so the second cast originates from the caster's current position.
+
+    protected override IEnumerator ApplyModifierEffect(Vector3 origin, Vector3 target)
     {
         // First cast
         yield return inner.TryCast(origin, target);
 
-        // Delay
+        // Wait before second cast
         yield return new WaitForSeconds(_delay);
 
-        // Recompute direction from current position
-        Vector3 start = owner.transform.position;
-        Vector3 dir   = (target - origin).normalized;
-        Vector3 end   = start + dir * Vector3.Distance(origin, target);
+        // Compute new origin and target based on caster's updated position
+        var casterPos = Owner.transform.position;
+        var direction = (target - origin).normalized;
+        var secondTarget = casterPos + direction * Vector3.Distance(origin, target);
 
         // Second cast
-        yield return inner.TryCast(start, end);
+        yield return inner.TryCast(casterPos, secondTarget);
     }
 }

@@ -1,8 +1,9 @@
-// File: Assets/Scripts/Spells/DamageMagnifier.cs
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+
+// Modifier that increases a spell's damage and mana cost by specified multipliers.
 
 public sealed class DamageMagnifier : ModifierSpell
 {
@@ -10,62 +11,26 @@ public sealed class DamageMagnifier : ModifierSpell
     private float manaMultiplier = 1.5f;
     private string modifierName = "damage-amplified";
 
-    public DamageMagnifier(Spell inner) : base(inner) { }
+    public DamageMagnifier(Spell innerSpell) : base(innerSpell) { }
 
     protected override string Suffix => modifierName;
 
-    public override void LoadAttributes(JObject j, Dictionary<string, float> vars)
+    // Load damage and mana multipliers from JSON, falling back to defaults.
+ 
+    public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
     {
-        modifierName = j["name"]?.Value<string>() ?? modifierName;
-        if (j["damage_multiplier"] != null)
-            damageMultiplier = RPNEvaluator.SafeEvaluateFloat(
-                j["damage_multiplier"].Value<string>(),
-                vars,
-                damageMultiplier
-            );
-        if (j["mana_multiplier"] != null)
-            manaMultiplier = RPNEvaluator.SafeEvaluateFloat(
-                j["mana_multiplier"].Value<string>(),
-                vars,
-                manaMultiplier
-            );
-        base.LoadAttributes(j, vars);
+        modifierName     = json.Value<string>("name") ?? modifierName;
+        damageMultiplier = json.Value<float?>("damage_multiplier") ?? damageMultiplier;
+        manaMultiplier   = json.Value<float?>("mana_multiplier") ?? manaMultiplier;
+        base.LoadAttributes(json, vars);
     }
 
-    protected override void InjectMods(StatBlock mods)
+
+    // Injects this modifier's multipliers into the spell's stat block.
+
+    protected override void InjectMods(StatBlock stats)
     {
-        mods.DamageMods.Add(new ValueMod(ModOp.Mul, damageMultiplier));
-        mods.ManaMods.Add(new ValueMod(ModOp.Mul, manaMultiplier));
-    }
-
-    protected override IEnumerator Cast(Vector3 from, Vector3 to)
-    {
-        // 1) Find the true “leaf” spell
-        Spell leaf = inner;
-        while (leaf is ModifierSpell ms) leaf = ms.InnerSpell;
-
-        // 2) Save original mods
-        var original = leaf.mods;
-
-        // 3) Merge original + our damage/mana mods
-        var merged = new StatBlock();
-        // copy all lists
-        foreach (var m in original.DamageMods) merged.DamageMods.Add(m);
-        foreach (var m in original.ManaMods) merged.ManaMods.Add(m);
-        foreach (var m in original.SpeedMods) merged.SpeedMods.Add(m);
-        foreach (var m in original.CooldownMods) merged.CooldownMods.Add(m);
-        // add ours
-        foreach (var m in this.mods.DamageMods) merged.DamageMods.Add(m);
-        foreach (var m in this.mods.ManaMods) merged.ManaMods.Add(m);
-        foreach (var m in this.mods.SpeedMods) merged.SpeedMods.Add(m);
-        foreach (var m in this.mods.CooldownMods) merged.CooldownMods.Add(m);
-
-        leaf.mods = merged;
-
-        // 4) Run the full chain under combined mods
-        yield return inner.TryCast(from, to);
-
-        // 5) Restore
-        leaf.mods = original;
+        stats.DamageMods.Add(new ValueMod(ModOp.Mul, damageMultiplier));
+        stats.ManaMods.Add(new ValueMod(ModOp.Mul, manaMultiplier));
     }
 }
