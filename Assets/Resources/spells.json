@@ -43,17 +43,20 @@
    "damage_amp": {
        "name": "damage-amplified",
        "description": "Increased damage and increased mana cost.",
+       "modifier": true,
        "damage_multiplier": "1.5",
        "mana_multiplier": "1.5"
    },
    "speed_amp": {
        "name": "speed-amplified",
+       "modifier": true,
        "description": "Faster projectile speed",
        "speed_multiplier": "1.75"
    },
    "doubler": {
        "name": "doubled",
        "description": "Spell is cast a second time after a small delay; increased mana cost and cooldown.",
+       "modifier": true,
        "delay": "0.5",
        "mana_multiplier": "1.5",
        "cooldown_multiplier": "1.5"
@@ -61,18 +64,21 @@
    "splitter": {
        "name": "split",
        "description": "Spell is cast twice in slightly different directions; increased mana cost.",
+       "modifier": true,
        "angle": "10",
        "mana_multiplier": "1.5"
    },
    "chaos": {
        "name": "chaotic",
        "description": "Significantly increased damage, but projectile is spiraling.",
+       "modifier": true,
        "damage_multiplier": "1.5 wave 5 / +",
        "projectile_trajectory": "spiraling"
    },
    "homing": {
        "name": "homing",
        "description": "Homing projectile, with decreased damage and increased mana cost.",
+       "modifier": true,
        "damage_multiplier": "0.75",
        "mana_adder": "10",
        "projectile_trajectory": "homing"
@@ -107,13 +113,10 @@
     "knockback_bolt": {
     "name": "Knockback Bolt",
     "description": "Knocks foes back on impact.",
-    "icon": 13,
-    "damage": { "amount": "8 power +", "type": "physical" },
-    "mana_cost": "12 power +",
-    "cooldown": "1.2",
-    "projectile": { "trajectory": "straight", "speed": "10", "sprite": 5 },
-    "effects": [
-    { "type": "knockback", "force": "5 power *" }
-    ]
+    "icon": 4,
+    "damage": { "amount": "30 power 2 * +", "type": "arcane" },
+    "mana_cost": "25 power 1 +",
+    "cooldown": "2.0",
+    "projectile": {"trajectory": "straight", "speed": "14", "sprite": 2, "lifetime": "0.25"}
     }
 }
