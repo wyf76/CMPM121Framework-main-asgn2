@@ -78,48 +78,45 @@
        "projectile_trajectory": "homing"
    },
     "frost_spike_modifier": {
-        "name": "Frost Spike",
+        "name":        "Frost Spike",
         "description": "Projectiles chill on hit.",
-        "icon": 10,
-        "mana_cost": "5",
-        "cooldown": "0",
-        "type": "modifier",
+        "icon":        10,
+        "type":        "modifier",
+        "mana_cost":   "5",
+        "cooldown":    "0",
         "effects": [
         { "type": "pierce", "count": "1" },
-        { "type": "chill", "duration": "2.0", "slow_factor": "0.5" }
+        { "type": "chill",  "duration": "2.0", "slow_factor": "0.5" }
         ]
     },
 
     "vampiric_essence_modifier": {
-        "name": "Vampiric Essence",
+        "name":        "Vampiric Essence",
         "description": "Life steals damage dealt.",
-        "icon": 12,
-        "mana_cost": "8",
-        "cooldown": "0",
-        "type": "modifier",
+        "icon":        12,
+        "type":        "modifier",
+        "mana_cost":   "8",
+        "cooldown":    "0",
         "effects": [
         { "type": "lifesteal", "percent": "0.2" }
         ]
     },
 
-    "knockback": {
-        "name": "Knockback Bolt",
-        "description": "Applies knockback to the enemy hit.",
-        "icon": 5,
-        "damage": { "amount": "power 5" },
-        "mana_cost": "10",
-        "cooldown": "1",
+    "knockback_bolt": {
+        "name":        "Knockback Bolt",
+        "description": "A bolt that knocks enemies back on hit.",
+        "icon":        5,
+        "type":        "base",
+        "damage": {"amount": "30 power 5 / +", "type": "arcane"},
+        "mana_cost":   "10",
+        "cooldown":    "1",
         "projectile": {
         "trajectory": "straight",
-        "speed": "10",
-        "sprite": 12
+        "speed":      "10",
+        "sprite":     12
         },
-        "type": "modifier",
         "effects": [
-        {
-            "type": "knockback",
-            "force": "power 5 *"
-        }
+        { "type": "knockback", "force": "power 5 *" }
         ]
     }
 }
