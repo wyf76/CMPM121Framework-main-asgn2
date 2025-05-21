@@ -5,56 +5,54 @@ using Newtonsoft.Json.Linq;
 
 public sealed class VampiricEssenceModifier : ModifierSpell
 {
-    // lifesteal percentage and modifier suffix
-    private float _lifeStealPercent = 0.2f;
-    private string _modifierName   = "vampiric";
+    private float  _lifeStealPercent = 0.2f;
+    private string _modifierName    = "vampiric";        // default suffix
 
     public VampiricEssenceModifier(Spell inner) : base(inner) { }
 
-    protected override string Suffix => _modifierName;
+    protected override string Suffix => _modifierName;   // what ShowReward prints
 
     public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
     {
-        if (json.TryGetValue("name", out var nameToken))
-            _modifierName = nameToken.Value<string>();
+        // 1) pull the pretty display name from JSON
+        _modifierName = json["name"]?.Value<string>() ?? _modifierName;
 
-        if (json.TryGetValue("effects", out var effectsToken) && effectsToken is JArray effects && effects.Count > 0)
-        {
-            var eff = effects[0];
-            if (eff.Value<string>("type") == "lifesteal")
-            {
-                var pct = eff.Value<string>("percent");
-                if (float.TryParse(pct, out var parsed))
-                    _lifeStealPercent = parsed;
-            }
-        }
+        // 2) parse your lifesteal fields
+        var eff = json["effects"]![0];
+        if (eff["type"]!.Value<string>() == "lifesteal")
+            _lifeStealPercent = float.Parse(eff["percent"]!.Value<string>());
 
         base.LoadAttributes(json, vars);
     }
 
-    protected override void InjectMods(StatBlock mods)
-    {
-        // no stat changes
-    }
+    // You still need a no‐op InjectMods override
+    protected override void InjectMods(StatBlock mods) { }
 
     protected override IEnumerator ApplyModifierEffect(Vector3 origin, Vector3 target)
     {
+        // Capture existing projectiles
         var before = Object.FindObjectsByType<ProjectileController>(FindObjectsSortMode.None);
-        yield return inner.TryCast(origin, target);
-        var after = Object.FindObjectsByType<ProjectileController>(FindObjectsSortMode.None);
 
+        // Cast the inner spell
+        yield return inner.TryCast(origin, target);
+
+        // Hook only the newly spawned projectiles
+        var after = Object.FindObjectsByType<ProjectileController>(FindObjectsSortMode.None);
         foreach (var proj in after)
         {
             if (System.Array.IndexOf(before, proj) < 0)
             {
-                proj.OnHit += (hitReceiver, _) =>
+                proj.OnHit += (hitReceiver, impactPos) =>
                 {
                     if (hitReceiver.team != owner.team)
                     {
+                        // Compute heal amount from this spell's damage
                         int healAmt = Mathf.RoundToInt(inner.Damage * _lifeStealPercent);
-                        var hitter = owner.GetComponent<Hittable>();
-                        if (hitter != null)
-                            hitter.Heal(healAmt);
+
+                        // Find the caster's Hittable and heal it
+                        var casterHittable = owner.GetComponent<Hittable>();
+                        if (casterHittable != null)
+                            casterHittable.Heal(healAmt);
                     }
                 };
             }

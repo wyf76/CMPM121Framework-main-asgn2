@@ -5,7 +5,6 @@ using Newtonsoft.Json.Linq;
 
 public sealed class HomingModifier : ModifierSpell
 {
-    // damage reduction and mana add
     private float _damageMultiplier;
     private float _manaAdder;
     private string _suffix;
@@ -21,19 +20,17 @@ public sealed class HomingModifier : ModifierSpell
 
     public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
     {
-        if (json.TryGetValue("name", out var n))
-            _suffix = n.Value<string>();
+        _suffix = json["name"]?.Value<string>() ?? _suffix;
 
-        if (json.TryGetValue("damage_multiplier", out var dm))
-            _damageMultiplier = RPNEvaluator.SafeEvaluateFloat(dm.Value<string>(), vars, _damageMultiplier);
+        if (json["damage_multiplier"] != null)
+            _damageMultiplier = RPNEvaluator.SafeEvaluateFloat(json["damage_multiplier"].Value<string>(), vars, _damageMultiplier);
 
-        if (json.TryGetValue("mana_adder", out var ma))
-            _manaAdder = RPNEvaluator.SafeEvaluateFloat(ma.Value<string>(), vars, _manaAdder);
+        if (json["mana_adder"] != null)
+            _manaAdder = RPNEvaluator.SafeEvaluateFloat(json["mana_adder"].Value<string>(), vars, _manaAdder);
 
         base.LoadAttributes(json, vars);
     }
 
-    // apply damage and mana modifiers
     protected override void InjectMods(StatBlock mods)
     {
         mods.DamageMods.Add(new ValueMod(ModOp.Mul, _damageMultiplier));
@@ -42,116 +39,77 @@ public sealed class HomingModifier : ModifierSpell
 
     protected override IEnumerator ApplyModifierEffect(Vector3 origin, Vector3 target)
     {
-        // choose behavior based on underlying spell
-        if (inner is ArcaneSpray)
-            yield return SprayHoming(origin, target);
-        else if (inner is ArcaneBlast)
-            yield return BlastHoming(origin, target);
-        else
-            yield return GenericHoming(origin, target);
+        // Choose pattern based on inner type
+        if (inner is ArcaneSpray)      yield return CreateHomingSpray(origin, target);
+        else if (inner is ArcaneBlast) yield return CreateHomingBlast(origin, target);
+        else                            yield return CreateGenericHoming(origin, target);
     }
 
-    private IEnumerator SprayHoming(Vector3 origin, Vector3 target)
+    private IEnumerator CreateHomingSpray(Vector3 o, Vector3 t)
     {
-        Vector3 dir = (target - origin).normalized;
-        float ang   = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-        int count   = Mathf.Max(1, Mathf.RoundToInt(Damage) + 5);
-        float span  = 60f;
-        float step  = span / (count - 1);
-        float start = ang - span / 2;
+        Vector3 dir = (t - o).normalized;
+        float  ang = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        int    cnt = Mathf.Max(1, Mathf.RoundToInt(inner.Damage) + 5);
+        float  span = 60f;
+        float  step = span / (cnt - 1);
+        float  start = ang - span/2;
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < cnt; i++)
         {
-            float a = start + step * i;
-            Vector3 d = new Vector3(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad));
-
-            // aim at closest enemy or spray direction
-            var enemy = GameManager.Instance.GetClosestEnemy(origin);
-            Vector3 tgt = enemy ? (enemy.transform.position - origin).normalized : d;
+            float  a   = start + step * i;
+            Vector3 d  = new Vector3(Mathf.Cos(a*Mathf.Deg2Rad), Mathf.Sin(a*Mathf.Deg2Rad),0);
+            GameObject enemy = GameManager.Instance.GetClosestEnemy(o);
+            Vector3   tgt   = enemy? (enemy.transform.position-o).normalized : d;
 
             GameManager.Instance.projectileManager.CreateProjectile(
-                inner.IconIndex,
-                "homing",
-                origin,
-                tgt,
-                inner.Speed,
-                (hit, _) =>
-                {
-                    if (hit.team != owner.team)
-                        hit.Damage(new global::Damage(Mathf.RoundToInt(Damage), global::Damage.Type.ARCANE));
-                },
-                0.1f + inner.Speed / 40f
+                inner.IconIndex, "homing", o, tgt, inner.Speed,
+                (hit,pos)=> { if(hit.team!=owner.team) hit.Damage(new global::Damage(Mathf.RoundToInt(Damage), global::Damage.Type.ARCANE)); },
+                0.1f + inner.Speed/40f
             );
             yield return new WaitForSeconds(0.02f);
         }
     }
 
-    private IEnumerator BlastHoming(Vector3 origin, Vector3 target)
+    private IEnumerator CreateHomingBlast(Vector3 o, Vector3 t)
     {
-        // fire single homing missile then secondary homing explosion
-        var enemy = GameManager.Instance.GetClosestEnemy(origin);
-        Vector3 dir = enemy ? (enemy.transform.position - origin).normalized : (target - origin).normalized;
+        GameObject enemy = GameManager.Instance.GetClosestEnemy(o);
+        Vector3   dir   = enemy? (enemy.transform.position-o).normalized : (t-o).normalized;
 
         GameManager.Instance.projectileManager.CreateProjectile(
-            inner.IconIndex,
-            "homing",
-            origin,
-            dir,
-            inner.Speed,
-            (hit, pos) =>
-            {
-                if (hit.team != owner.team)
+            inner.IconIndex, "homing", o, dir, inner.Speed,
+            (hit,pos)=>{
+                if (hit.team!=owner.team)
                 {
                     hit.Damage(new global::Damage(Mathf.RoundToInt(Damage), global::Damage.Type.ARCANE));
-                    CreateSecondaryHoming(pos, Mathf.RoundToInt(Damage) / 4);
+                    CreateHomingSecondary(pos, Mathf.RoundToInt(Damage)/4);
                 }
             }
         );
         yield return null;
     }
 
-    private void CreateSecondaryHoming(Vector3 center, int dmg)
+    private void CreateHomingSecondary(Vector3 c, int dmg)
     {
-        int count = 8;
-        float step = 360f / count;
-
-        for (int i = 0; i < count; i++)
-        {
-            float a = i * step * Mathf.Deg2Rad;
-            Vector3 d = new Vector3(Mathf.Cos(a), Mathf.Sin(a));
-
+        int cnt = 8; float step=360f/cnt;
+        for(int i=0;i<cnt;i++){
+            float a = i*step;
+            Vector3 d = new Vector3(Mathf.Cos(a*Mathf.Deg2Rad), Mathf.Sin(a*Mathf.Deg2Rad),0);
             GameManager.Instance.projectileManager.CreateProjectile(
-                inner.IconIndex,
-                "homing",
-                center,
-                d,
-                inner.Speed * 0.8f,
-                (hit, _) =>
-                {
-                    if (hit.team != owner.team)
-                        hit.Damage(new global::Damage(dmg, global::Damage.Type.ARCANE));
-                },
+                inner.IconIndex, "homing", c, d, inner.Speed*0.8f,
+                (hit,pos)=>{ if(hit.team!=owner.team) hit.Damage(new global::Damage(dmg, global::Damage.Type.ARCANE)); },
                 0.3f
             );
         }
     }
 
-    private IEnumerator GenericHoming(Vector3 origin, Vector3 target)
+    private IEnumerator CreateGenericHoming(Vector3 o, Vector3 t)
     {
-        var enemy = GameManager.Instance.GetClosestEnemy(origin);
-        Vector3 dir = enemy ? (enemy.transform.position - origin).normalized : (target - origin).normalized;
+        GameObject enemy = GameManager.Instance.GetClosestEnemy(o);
+        Vector3   dir   = (enemy? enemy.transform.position : t - o).normalized;
 
         GameManager.Instance.projectileManager.CreateProjectile(
-            inner.IconIndex,
-            "homing",
-            origin,
-            dir,
-            inner.Speed,
-            (hit, _) =>
-            {
-                if (hit.team != owner.team)
-                    hit.Damage(new global::Damage(Mathf.RoundToInt(Damage), global::Damage.Type.ARCANE));
-            }
+            inner.IconIndex, "homing", o, dir, inner.Speed,
+            (hit,pos)=>{ if(hit.team!=owner.team) hit.Damage(new global::Damage(Mathf.RoundToInt(Damage), global::Damage.Type.ARCANE)); }
         );
         yield return null;
     }

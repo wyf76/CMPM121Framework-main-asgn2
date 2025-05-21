@@ -41,14 +41,11 @@ public sealed class ArcaneBlast : Spell
     protected override float BaseCooldown => _baseCooldownTime;
 
     // Collect variables for RPN evaluation
-    private Dictionary<string, float> GetEvaluationVariables()
+    private Dictionary<string, float> GetEvaluationVariables() => new Dictionary<string, float>
     {
-        return new Dictionary<string, float>
-        {
-            ["power"] = owner.spellPower,
-            ["wave"]  = GetCurrentWave()
-        };
-    }
+        ["power"] = owner.spellPower,
+        ["wave"]  = GetCurrentWave()
+    };
 
     // Retrieve current wave from EnemySpawner, defaulting to 1
     private float GetCurrentWave()
@@ -61,40 +58,38 @@ public sealed class ArcaneBlast : Spell
     public override void LoadAttributes(JObject json, Dictionary<string, float> initialVars)
     {
         // Basic metadata
-        _displayName = json.Value<string>("name");
-        _description = json.Value<string>("description") ?? string.Empty;
-        _iconIndex   = json.Value<int>("icon");
+        _displayName = json["name"].Value<string>();
+        _description = json["description"]?.Value<string>() ?? string.Empty;
+        _iconIndex  = json["icon"].Value<int>();
 
-        // Primary stats expressions
+        // Primary stats
         _damageExpression = json["damage"]["amount"].Value<string>();
         _speedExpression  = json["projectile"]["speed"].Value<string>();
+        _baseManaCost     = RPNEvaluator.SafeEvaluateFloat(json["mana_cost"].Value<string>(), initialVars, 1f);
+        _baseCooldownTime = RPNEvaluator.SafeEvaluateFloat(json["cooldown"].Value<string>(), initialVars, 0f);
 
-        // Mana & cooldown
-        _baseManaCost     = RPNEvaluator.SafeEvaluateFloat(json.Value<string>("mana_cost"), initialVars, _baseManaCost);
-        _baseCooldownTime = RPNEvaluator.SafeEvaluateFloat(json.Value<string>("cooldown"),  initialVars, _baseCooldownTime);
-
-        // Primary projectile settings
-        _primaryTrajectory       = json["projectile"].Value<string>("trajectory");
-        _primaryProjectileSprite = json["projectile"].Value<int?>("sprite") ?? _primaryProjectileSprite;
+        // Primary projectile behavior
+        _primaryTrajectory       = json["projectile"]["trajectory"].Value<string>();
+        _primaryProjectileSprite = json["projectile"]["sprite"]?.Value<int>() ?? 0;
 
         // Secondary settings
-        _secondaryCountExpression  = json.Value<string>("N");
-        _secondaryDamageExpression = json.Value<string>("secondary_damage");
+        _secondaryCountExpression  = json["N"]?.Value<string>();
+        _secondaryDamageExpression = json["secondary_damage"]?.Value<string>();
 
-        if (json.TryGetValue("secondary_projectile", out JToken secToken) && secToken is JObject sec)
+        if (json["secondary_projectile"] != null)
         {
-            _secondaryTrajectory       = sec.Value<string>("trajectory") ?? _primaryTrajectory;
-            _secondarySpeed            = sec.TryGetValue("speed", out JToken spd)
-                ? RPNEvaluator.SafeEvaluateFloat(spd.Value<string>(), initialVars, BaseSpeed * 0.8f)
+            var sec = json["secondary_projectile"];
+            _secondaryTrajectory      = sec["trajectory"]?.Value<string>() ?? _primaryTrajectory;
+            _secondarySpeed           = sec["speed"] != null
+                ? RPNEvaluator.SafeEvaluateFloat(sec["speed"].Value<string>(), initialVars, BaseSpeed * 0.8f)
                 : BaseSpeed * 0.8f;
-            _secondaryLifetime         = sec.TryGetValue("lifetime", out JToken lt)
-                ? float.Parse(lt.Value<string>())
+            _secondaryLifetime        = sec["lifetime"] != null
+                ? float.Parse(sec["lifetime"].Value<string>())
                 : 0.3f;
-            _secondaryProjectileSprite = sec.Value<int?>("sprite") ?? _primaryProjectileSprite;
+            _secondaryProjectileSprite = sec["sprite"]?.Value<int>() ?? _primaryProjectileSprite;
         }
         else
         {
-            // Defaults if no secondary_projectile section
             _secondaryTrajectory       = _primaryTrajectory;
             _secondarySpeed            = BaseSpeed * 0.8f;
             _secondaryLifetime         = 0.3f;
@@ -114,58 +109,58 @@ public sealed class ArcaneBlast : Spell
             ? Mathf.RoundToInt(RPNEvaluator.SafeEvaluateFloat(_secondaryCountExpression, GetEvaluationVariables(), 8f))
             : 8;
 
-        Debug.Log($"[{_displayName}] Casting: dmg={primaryDamage:F1}, spd={Speed:F1}, secDmg={secondaryDamage:F1}x{secondaryCount}");
+        Debug.Log($"[{_displayName}] Casting: primaryDamage={primaryDamage:F1}, speed={Speed:F1}," +
+                  $" secondaryDamage={secondaryDamage:F1} x{secondaryCount}");
 
         // Launch primary projectile
         GameManager.Instance.projectileManager.CreateProjectile(
             _primaryProjectileSprite,
             _primaryTrajectory,
             origin,
-            (targetPosition - origin).normalized,
+            targetPosition - origin,
             Speed,
             (hit, impactPos) =>
             {
                 if (hit.team != owner.team)
                 {
-                    int dmgAmt = Mathf.RoundToInt(primaryDamage);
-                    hit.Damage(new global::Damage(dmgAmt, global::Damage.Type.ARCANE));
-                    Debug.Log($"[{_displayName}] Primary hit {hit.owner.name} for {dmgAmt}");
+                    int damageAmount = Mathf.RoundToInt(primaryDamage);
+                    hit.Damage(new global::Damage(damageAmount, global::Damage.Type.ARCANE));
+                    Debug.Log($"[{_displayName}] Primary hit {hit.owner.name} for {damageAmount}");
 
-                    // Spawn secondary shards
+                    // Spawn secondaries
                     SpawnSecondaryProjectiles(impactPos, secondaryDamage, secondaryCount);
                 }
-            }
-        );
+            });
 
         yield return null;
     }
 
-    // Spawn secondary projectiles in a circular pattern
+    // Spawn secondary projectiles in circle
     private void SpawnSecondaryProjectiles(Vector3 center, float damage, int count)
     {
         float angleStep = 360f / count;
+
         for (int i = 0; i < count; i++)
         {
             float angleRad = (i * angleStep) * Mathf.Deg2Rad;
-            Vector3 dir = new Vector3(Mathf.Cos(angleRad), Mathf.Sin(angleRad), 0f);
+            Vector3 direction = new Vector3(Mathf.Cos(angleRad), Mathf.Sin(angleRad), 0f).normalized;
 
             GameManager.Instance.projectileManager.CreateProjectile(
                 _secondaryProjectileSprite,
                 _secondaryTrajectory,
                 center,
-                dir.normalized,
-                _secondarySpeed,
+                direction,
+                _secondarySpeed * Speed / BaseSpeed,
                 (hit, _) =>
                 {
                     if (hit.team != owner.team)
                     {
-                        int dmgAmt = Mathf.RoundToInt(damage);
-                        hit.Damage(new global::Damage(dmgAmt, global::Damage.Type.ARCANE));
-                        Debug.Log($"[{_displayName}] Secondary hit {hit.owner.name} for {dmgAmt}");
+                        int dmg = Mathf.RoundToInt(damage);
+                        hit.Damage(new global::Damage(dmg, global::Damage.Type.ARCANE));
+                        Debug.Log($"[{_displayName}] Secondary hit {hit.owner.name} for {dmg}");
                     }
                 },
-                _secondaryLifetime
-            );
+                _secondaryLifetime);
         }
     }
 }

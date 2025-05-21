@@ -1,7 +1,8 @@
 using UnityEngine;
-using System;
+using System.Collections;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
-<<<<<<< HEAD
 
 //Base class for all spells, handling stats and casting.
 
@@ -39,42 +40,4 @@ public abstract class Spell
     protected abstract IEnumerator Cast(Vector3 from, Vector3 to);
 
     public virtual void LoadAttributes(JObject json, Dictionary<string,float> vars) { }
-=======
-public abstract class Spell
-{
-    public string Name { get; protected set; }
-    public string Description { get; protected set; }
-    public int IconIndex { get; protected set; }
-
-    protected float lastCastTime = -Mathf.Infinity;
-
-    internal abstract void CastInternal(Vector3 spawnPos, Vector3 direction, SpellModifierContext ctx);
-
-    public void Cast(Vector3 spawnPos, Vector3 direction)
-    {
-        if (!IsOffCooldown()) return;
-        SpellModifierContext ctx = new SpellModifierContext();
-        CastInternal(spawnPos, direction, ctx);
-        lastCastTime = Time.time;
-    }
-
-    public bool IsOffCooldown() => Time.time >= lastCastTime + GetCooldown();
-
-    public abstract int GetManaCost();
-    public abstract float GetDamage();
-    public abstract float GetCooldown();
-    public abstract string GetProjectileType();
-    public abstract int GetProjectileSprite();
-    public abstract float GetProjectileSpeed();
-    public abstract float GetProjectileLifetime();
-
-    public bool IsOffCooldown()
-    {
-        return Time.time >= lastCastTime + GetCooldown();
-    }
-
-    public void PutOnCooldown()
-    {
-        lastCastTime = Time.time;
-    }
 }

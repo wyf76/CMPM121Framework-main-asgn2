@@ -4,85 +4,90 @@ using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-// Fires a straight‐flying bolt whose damage and speed scale via RPN formulas.
-
 public sealed class ArcaneBolt : Spell
 {
+    // JSON-loaded fields
     private string _displayName;
     private Damage.Type _damageType;
-    private int _iconIndex;
     private float _baseManaCost;
-    private float _baseCooldown;
+    private float _baseCooldownTime;
+    private int _iconIndex;
     private string _trajectory;
-    private int _spriteIndex;
+    private int _projectileSprite;
+
+    // RPN expressions for dynamic scaling
     private string _damageExpression;
     private string _speedExpression;
 
-    public ArcaneBolt(SpellCaster caster) : base(caster) { }
+    public ArcaneBolt(SpellCaster owner) : base(owner) { }
 
     public override string DisplayName => _displayName;
     public override int IconIndex => _iconIndex;
 
     protected override float BaseDamage => RPNEvaluator.SafeEvaluateFloat(
-        _damageExpression, GetVars(), 10f);
+        _damageExpression,
+        new Dictionary<string, float> {
+            ["power"] = owner.spellPower,
+            ["wave"]  = GetCurrentWave()
+        },
+        10f);
+
     protected override float BaseSpeed => RPNEvaluator.SafeEvaluateFloat(
-        _speedExpression, GetVars(), 8f);
+        _speedExpression,
+        new Dictionary<string, float> {
+            ["power"] = owner.spellPower,
+            ["wave"]  = GetCurrentWave()
+        },
+        8f);
+
     protected override float BaseMana => _baseManaCost;
-    protected override float BaseCooldown => _baseCooldown;
+    protected override float BaseCooldown => _baseCooldownTime;
 
-    private Dictionary<string, float> GetVars()
+    // Get current wave from spawner
+    private float GetCurrentWave()
     {
-        return new Dictionary<string, float>
-        {
-            ["power"] = Owner.spellPower,
-            ["wave"]  = GetWave()
-        };
+        var spawner = UnityEngine.Object.FindFirstObjectByType<EnemySpawnerController>();
+        return spawner != null ? spawner.currentWave : 1f;
     }
 
-    private float GetWave()
+    // Load JSON attributes
+    public override void LoadAttributes(JObject json, Dictionary<string, float> initialVars)
     {
-        var sp = UnityEngine.Object.FindAnyObjectByType<EnemySpawnerController>();
-        return sp != null ? sp.currentWave : 1f;
-    }
+        _displayName = json["name"].Value<string>();
+        _iconIndex   = json["icon"].Value<int>();
 
-    public override void LoadAttributes(JObject json, Dictionary<string, float> vars)
-    {
-        _displayName      = json.Value<string>("name");
-        _iconIndex        = json.Value<int>("icon");
         _damageExpression = json["damage"]["amount"].Value<string>();
-        _damageType       = Enum.Parse<Damage.Type>(
-                                json["damage"]["type"].Value<string>(),
-                                true);
-        _baseManaCost     = RPNEvaluator.SafeEvaluateFloat(
-                                json.Value<string>("mana_cost"), vars, _baseManaCost);
-        _baseCooldown     = RPNEvaluator.SafeEvaluateFloat(
-                                json.Value<string>("cooldown"),  vars, _baseCooldown);
+        _damageType       = (Damage.Type)Enum.Parse(typeof(Damage.Type), json["damage"]["type"].Value<string>(), true);
+
+        _baseManaCost     = RPNEvaluator.SafeEvaluateFloat(json["mana_cost"].Value<string>(), initialVars, 1f);
+        _baseCooldownTime = RPNEvaluator.SafeEvaluateFloat(json["cooldown"].Value<string>(), initialVars, 0f);
+
         _trajectory       = json["projectile"]["trajectory"].Value<string>();
         _speedExpression  = json["projectile"]["speed"].Value<string>();
-        _spriteIndex      = json["projectile"]["sprite"].Value<int>();
+        _projectileSprite = json["projectile"]["sprite"].Value<int>();
     }
 
-    protected override IEnumerator Cast(Vector3 origin, Vector3 target)
+    // Cast the bolt
+    protected override IEnumerator Cast(Vector3 origin, Vector3 targetPosition)
     {
-        float dmg   = Damage;
-        float spd   = Speed;
-        Vector3 dir = (target - origin).normalized;
+        float damageValue = Damage;
+        float speedValue  = Speed;
 
-        Debug.Log($"[{_displayName}] Bolt → dmg={dmg:F1}, spd={spd:F1}");
+        Debug.Log($"[{_displayName}] Casting bolt ▶ dmg={damageValue:F1} ({_damageType}), mana={Mana:F1}, spd={speedValue:F1}");
 
         GameManager.Instance.projectileManager.CreateProjectile(
-            _spriteIndex,
+            _projectileSprite,
             _trajectory,
             origin,
-            dir,
-            spd,
+            targetPosition - origin,
+            speedValue,
             (hit, _) =>
             {
-                if (hit.team != Owner.team)
+                if (hit.team != owner.team)
                 {
-                    int amount = Mathf.RoundToInt(dmg);
-                    hit.Damage(new global::Damage(amount, _damageType));
-                    Debug.Log($"[{_displayName}] Hit {hit.owner.name} for {amount} ({_damageType})");
+                    int amt = Mathf.RoundToInt(damageValue);
+                    hit.Damage(new global::Damage(amt, _damageType));
+                    Debug.Log($"[{_displayName}] Hit {hit.owner.name} for {amt} ({_damageType})");
                 }
             });
 
