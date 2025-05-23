@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "CMPM121Framework-main-asgn2-main.sln"
+    "dotnet.defaultSolution": "CMPM121Framework-main-asgn2.sln"
 }
