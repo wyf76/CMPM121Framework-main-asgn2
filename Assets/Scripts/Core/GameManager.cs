@@ -28,6 +28,7 @@ public class GameManager
     public EnemySpriteManager enemySpriteManager;
     public PlayerSpriteManager playerSpriteManager;
     public RelicIconManager relicIconManager;
+    private CharacterClassDefinition selectedClass; // New field
 
     private readonly List<GameObject> enemies = new List<GameObject>();
     public int enemy_count => enemies.Count;
@@ -60,6 +61,16 @@ public class GameManager
 
         ResetGame();
     }
+    
+    // New methods for class selection
+    public void SetSelectedClass(CharacterClassDefinition def) {
+        selectedClass = def;
+    }
+
+    public CharacterClassDefinition GetSelectedClass() {
+        return selectedClass;
+    }
+
 
     public void ResetGame()
     {
@@ -72,6 +83,7 @@ public class GameManager
         totalDamageTaken = 0;
         timeSurvived = 0f;
         wavesCompleted = 0;
+        selectedClass = null; // Reset selected class
 
         if (player != null)
             Object.Destroy(player);

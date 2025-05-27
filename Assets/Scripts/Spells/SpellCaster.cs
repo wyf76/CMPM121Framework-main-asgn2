@@ -8,6 +8,7 @@ public class SpellCaster : MonoBehaviour
     public int max_mana;
     public int mana;
     public int mana_reg;
+    public int nextSpellManaDiscount = 0; // New field for relic effect
 
     [Header("Team")]
     public Hittable.Team team;
@@ -44,25 +45,21 @@ public class SpellCaster : MonoBehaviour
             Debug.LogWarning($"[SpellCaster] No spell in slot {slot}");
             yield break;
         }
+        
+        // Calculate the actual mana cost with the discount
+        int finalManaCost = Mathf.Max(0, Mathf.RoundToInt(s.Mana) - nextSpellManaDiscount);
 
-        // Bug fix: First check if there's enough mana AND the spell is ready
-        if (!s.IsReady)
+        if (!s.IsReady || mana < finalManaCost)
         {
             yield break;
         }
         
-        if (mana < s.Mana)
-        {
-            yield break;
-        }
+        Debug.Log($"[SpellCaster] Slot {slot} -> Casting \"{s.DisplayName}\" (mana={mana}, cost={finalManaCost})");
         
-        Debug.Log($"[SpellCaster] Slot {slot} -> Casting \"{s.DisplayName}\" (mana={mana}, cost={s.Mana})");
-        
-        // Deduct mana and update last cast time BEFORE casting
-        mana -= Mathf.RoundToInt(s.Mana);
+        mana -= finalManaCost;
         s.lastCast = Time.time;
+        nextSpellManaDiscount = 0; // Reset discount after use
         
-        // Then cast the spell
         yield return s.TryCast(from, to);
     }
 }

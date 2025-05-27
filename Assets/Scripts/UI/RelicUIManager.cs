@@ -5,6 +5,9 @@ public class RelicUIManager : MonoBehaviour
     public GameObject relicUIPrefab;
     public PlayerController player;
 
+    public GameObject prefab;
+    public Transform parent;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -12,7 +15,7 @@ public class RelicUIManager : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void Update()   
     {
         
     }
@@ -27,4 +30,10 @@ public class RelicUIManager : MonoBehaviour
         ruic.index = player.relics.Count - 1;
         
     }*/
+
+    public void AddRelic(string name, int spriteIndex)
+    {
+        GameObject go = Instantiate(prefab, parent);
+        go.GetComponent<RelicUI>().Set(name, spriteIndex);
+    }
 }

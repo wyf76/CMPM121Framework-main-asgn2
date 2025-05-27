@@ -18,6 +18,7 @@ public class EnemySpawnerController : MonoBehaviour
     private bool isEndless => currentLevel != null && currentLevel.waves <= 0;
 
     private bool waveInProgress = false;
+    private CharacterClassDefinition selectedClass; // Store the selected class
 
     private void TriggerWin()
     {
@@ -45,6 +46,14 @@ public class EnemySpawnerController : MonoBehaviour
     {
         Debug.Log($"[EnemySpawner] StartLevel() called for '{levelname}'");
         level_selector.gameObject.SetActive(false);
+        
+        // Get the selected class from the GameManager
+        selectedClass = GameManager.Instance.GetSelectedClass();
+        if (selectedClass == null) {
+            Debug.LogError("No class selected!");
+            // Fallback to the first available class
+            selectedClass = GameDataLoader.Classes.Values.First();
+        }
 
         currentLevel = GameManager.Instance.levelDefs
             .Find(l => l.name == levelname);
@@ -56,10 +65,9 @@ public class EnemySpawnerController : MonoBehaviour
 
         currentWave = 1;
 
-        // Initialize player stats for wave 1
         var playerController = GameManager.Instance.player.GetComponent<PlayerController>();
-        playerController.StartLevel(); // Initialize components and UI
-        ScalePlayerForWave(currentWave); // Set initial stats using RPN
+        playerController.StartLevel();
+        ScalePlayerForWave(currentWave); 
 
         StartCoroutine(SpawnWave());
     }
@@ -72,14 +80,10 @@ public class EnemySpawnerController : MonoBehaviour
 
     IEnumerator SpawnWave()
     {
-        Debug.Log($"[EnemySpawner] SpawnWave() entry (wave {currentWave}), inProgress={waveInProgress}");
         if (waveInProgress) yield break;
         waveInProgress = true;
 
-        // 1) Scale player
         ScalePlayerForWave(currentWave);
-
-        // 2) Countdown
         GameManager.Instance.state = GameManager.GameState.COUNTDOWN;
         for (int i = 3; i > 0; i--)
         {
@@ -87,36 +91,27 @@ public class EnemySpawnerController : MonoBehaviour
             yield return new WaitForSeconds(1);
         }
         GameManager.Instance.countdown = 0;
-
-        // 3) In‑wave
         GameManager.Instance.state = GameManager.GameState.INWAVE;
 
-        // 4) Spawn
         int totalSpawned = 0;
         foreach (var spawn in currentLevel.spawns)
             yield return StartCoroutine(SpawnEnemies(spawn, c => totalSpawned += c));
         lastWaveEnemyCount = totalSpawned;
 
-        // 5) Wait for clear
         yield return new WaitWhile(() => GameManager.Instance.enemy_count > 0);
 
-        // 6) Win check (only non‑Endless)
         if (!isEndless && currentWave >= currentLevel.waves)
         {
             TriggerWin();
             yield break;
         }
 
-        // 7) Reward screen
         GameManager.Instance.state = GameManager.GameState.WAVEEND;
         GameManager.Instance.wavesCompleted++;
 
-        // 8) Prep next wave exactly like Easy/Medium
         currentWave++;
         waveInProgress = false;
     }
-
-
 
     IEnumerator SpawnEnemies(Spawn spawn, System.Action<int> onSpawnComplete = null)
     {
@@ -207,14 +202,19 @@ public class EnemySpawnerController : MonoBehaviour
 
     private void ScalePlayerForWave(int wave)
     {
-        Debug.Log($"[EnemySpawner] ScalePlayerForWave({wave})");
+        if (selectedClass == null) {
+            Debug.LogError("Cannot scale player stats, no class is selected!");
+            return;
+        }
+
+        Debug.Log($"[EnemySpawner] ScalePlayerForWave({wave}) using class '{selectedClass}'");
 
         var v = new Dictionary<string, float> { { "wave", wave } };
-        float rHP = RPNEvaluator.EvaluateFloat("95 wave 5 * +", v);
-        float rMana = RPNEvaluator.EvaluateFloat("90 wave 10 * +", v);
-        float rRe = RPNEvaluator.EvaluateFloat("10 wave +", v);
-        float rPow = RPNEvaluator.EvaluateFloat("wave 10 *", v);
-        float rSpd = RPNEvaluator.EvaluateFloat("5", v);
+        float rHP = RPNEvaluator.SafeEvaluateFloat(selectedClass.health, v);
+        float rMana = RPNEvaluator.SafeEvaluateFloat(selectedClass.mana, v);
+        float rRe = RPNEvaluator.SafeEvaluateFloat(selectedClass.mana_regeneration, v);
+        float rPow = RPNEvaluator.SafeEvaluateFloat(selectedClass.spellpower, v);
+        float rSpd = RPNEvaluator.SafeEvaluateFloat(selectedClass.speed, v);
 
         var pc = GameManager.Instance.player.GetComponent<PlayerController>();
         if (pc == null)
@@ -223,20 +223,15 @@ public class EnemySpawnerController : MonoBehaviour
             return;
         }
 
-        // Update HP, preserving health percentage
         int newMaxHP = Mathf.RoundToInt(rHP);
         pc.hp.SetMaxHP(newMaxHP, true);
 
-        // Update mana and regen
         pc.spellcaster.max_mana = Mathf.RoundToInt(rMana);
         pc.spellcaster.mana = pc.spellcaster.max_mana;
         pc.spellcaster.mana_reg = Mathf.RoundToInt(rRe);
-
-        // Update spell power and speed
         pc.spellcaster.spellPower = Mathf.RoundToInt(rPow);
         pc.speed = Mathf.RoundToInt(rSpd);
 
-        // Refresh UI
         pc.healthui.SetHealth(pc.hp);
         pc.manaui.SetSpellCaster(pc.spellcaster);
 

@@ -11,6 +11,8 @@ public class RelicUI : MonoBehaviour
     public GameObject highlight;
     public TextMeshProUGUI label;
 
+    
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -30,5 +32,11 @@ public class RelicUI : MonoBehaviour
         label.text = r.GetLabel();
         highlight.SetActive(r.IsActive());
         */
+    }
+
+    public void Set(string name, int spriteIndex)
+    {
+        label.text = name;
+        GameManager.Instance.relicIconManager.PlaceSprite(spriteIndex, icon);
     }
 }

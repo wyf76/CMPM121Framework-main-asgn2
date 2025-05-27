@@ -7,7 +7,8 @@ public class ProjectileController : MonoBehaviour
     public float lifetime;
     public event Action<Hittable, Vector3> OnHit;
     public ProjectileMovement movement;
-    public bool piercing = false; // <-- Add piercing flag
+    public bool piercing = false;
+    private bool hasHit = false; // Flag to check if it hit something
 
     void Start()
     {
@@ -42,6 +43,7 @@ public class ProjectileController : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("projectile")) return;
 
+        hasHit = true; // Mark that the projectile has hit something
         if (collision.gameObject.CompareTag("unit"))
         {
             var ec = collision.gameObject.GetComponent<EnemyController>();
@@ -59,7 +61,7 @@ public class ProjectileController : MonoBehaviour
             }
         }
 
-        if (!piercing) // <-- Only destroy if not piercing
+        if (!piercing) 
             Destroy(gameObject);
     }
 
@@ -74,6 +76,11 @@ public class ProjectileController : MonoBehaviour
     IEnumerator Expire()
     {
         yield return new WaitForSeconds(lifetime);
+        if (!hasHit)
+        {
+            // If lifetime expires and it hasn't hit anything, it's a miss
+            RelicEventBus.SpellMissed();
+        }
         Destroy(gameObject);
     }
 }
