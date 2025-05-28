@@ -1,31 +1,30 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Relic
 {
-    private RelicTrigger trigger;
-    private RelicEffect  effect;
+    public string Name { get; }
+    public int SpriteIndex { get; }
 
-    public string Name   { get; }
-    public int    Sprite { get; }
+    // expose these so RewardScreenManager can read .description
+    public TriggerData TriggerData { get; }
+    public EffectData EffectData { get; }
 
-    public Relic(RelicDefinition def, PlayerController player)
+    readonly IRelicTrigger trigger;
+    readonly IRelicEffect effect;
+
+    public Relic(RelicData d)
     {
-        Name   = def.name;
-        Sprite = def.sprite;
+        Name = d.name;
+        SpriteIndex = d.sprite;
 
-        // 1) Build the effect from the JSON definition
-        effect = RelicEffectFactory.Create(def.effect, player);
+        TriggerData = d.trigger;
+        EffectData = d.effect;
 
-        // 2) Build the trigger from the JSON definition
-        trigger = RelicTriggerFactory.Create(def.trigger, effect, player);
-
-        // 3) Start listening
-        trigger.Register();
+        trigger = RelicTriggers.Create(d.trigger, this);
+        effect = RelicEffects.Create(d.effect, this);
     }
 
-
-    public void Cleanup()
-    {
-        trigger.Unregister();
-    }
+    public void Init() => trigger.Subscribe();
+    public void Fire() => effect.Activate();
+    public void End() => effect.Deactivate();
 }

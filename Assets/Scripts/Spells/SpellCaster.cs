@@ -9,6 +9,7 @@ public class SpellCaster : MonoBehaviour
     public int mana;
     public int mana_reg;
     public int nextSpellManaDiscount = 0; // New field for relic effect
+    public static event System.Action OnSpellCast;
 
     [Header("Team")]
     public Hittable.Team team;
@@ -58,7 +59,10 @@ public class SpellCaster : MonoBehaviour
         
         mana -= finalManaCost;
         s.lastCast = Time.time;
-        nextSpellManaDiscount = 0; // Reset discount after use
+        nextSpellManaDiscount = 0; 
+
+        OnSpellCast?.Invoke(); 
+
         
         yield return s.TryCast(from, to);
     }

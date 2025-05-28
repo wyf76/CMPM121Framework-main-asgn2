@@ -11,6 +11,9 @@ public class EnemySpawnerController : MonoBehaviour
     public GameObject button;
     public GameObject enemy;
     public SpawnPoint[] SpawnPoints;
+    public GameObject mainMenuPanel;
+    public static event System.Action<int> OnWaveEnd;
+    public static event System.Action<GameObject> OnEnemyKilled;
 
     public Level currentLevel { get; private set; }
     public int currentWave { get; private set; }
@@ -37,6 +40,7 @@ public class EnemySpawnerController : MonoBehaviour
                 new Vector3(0, 130 - 100 * GameManager.Instance.levelDefs.IndexOf(lvl));
             var controller = selector.GetComponent<MenuSelectorController>();
             controller.spawner = this;
+            controller.mainMenuPanel = this.mainMenuPanel; // <-- ADD THIS LINE
             controller.SetLevel(lvl.name);
             selector.GetComponent<Button>().onClick.AddListener(controller.StartLevel);
         }
@@ -55,6 +59,20 @@ public class EnemySpawnerController : MonoBehaviour
             selectedClass = GameDataLoader.Classes.Values.First();
         }
 
+        if (GameManager.Instance.player != null && selectedClass != null)
+        {
+            SpriteRenderer playerSpriteRenderer = GameManager.Instance.player.GetComponent<SpriteRenderer>();
+            if (playerSpriteRenderer != null)
+            {
+                // Use the sprite index from the class definition to get the correct sprite
+                playerSpriteRenderer.sprite = GameManager.Instance.playerSpriteManager.Get(selectedClass.sprite);
+            }
+            else
+            {
+                Debug.LogWarning("Player does not have a SpriteRenderer component to change the sprite!");
+            }
+        }
+        
         currentLevel = GameManager.Instance.levelDefs
             .Find(l => l.name == levelname);
         if (currentLevel == null)
@@ -65,8 +83,29 @@ public class EnemySpawnerController : MonoBehaviour
 
         currentWave = 1;
 
+        if (GameManager.Instance.player == null)
+        {
+            Debug.LogError("GameManager.Instance.player is null before getting PlayerController!");
+            return;
+        }
+        Debug.Log($"Getting PlayerController from GameManager.Instance.player: {GameManager.Instance.player.name}", GameManager.Instance.player);
         var playerController = GameManager.Instance.player.GetComponent<PlayerController>();
+
+        if (playerController == null)
+        {
+            Debug.LogError("playerController is null in EnemySpawnerController.StartLevel!");
+            return;
+        }
+
         playerController.StartLevel();
+
+        if (GameManager.Instance.player == null)
+        {
+            Debug.LogError("GameManager.Instance.player is null after calling StartLevel!");
+            return;
+        }
+        Debug.Log($"After calling StartLevel, checking player again: {GameManager.Instance.player.name}", GameManager.Instance.player);
+
         ScalePlayerForWave(currentWave); 
 
         StartCoroutine(SpawnWave());
@@ -108,6 +147,8 @@ public class EnemySpawnerController : MonoBehaviour
 
         GameManager.Instance.state = GameManager.GameState.WAVEEND;
         GameManager.Instance.wavesCompleted++;
+
+        OnWaveEnd?.Invoke(currentWave); 
 
         currentWave++;
         waveInProgress = false;
@@ -163,6 +204,9 @@ public class EnemySpawnerController : MonoBehaviour
                 var en = go.GetComponent<EnemyController>();
                 en.hp = new Hittable(hp, Hittable.Team.MONSTERS, go);
                 en.speed = (int)speed;
+
+                en.hp.OnDeath += () => OnEnemyKilled?.Invoke(go);
+
                 GameManager.Instance.AddEnemy(go);
 
                 spawned++;
